@@ -1,0 +1,18 @@
+.claude
+.mcp.json
+.serena
+CLAUDE.md
+
+# Project specific files
+tags.json
+data/
+worklog
+
+# System files
+.DS_Store
+
+# Coverage files
+*.out
+coverage.html
+worklog
+
