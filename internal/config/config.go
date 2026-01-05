@@ -19,10 +19,14 @@ func GetDataDir() string {
 }
 
 // GetTagsFile returns the tags file path.
-// Priority: WORKLOG_TAGS_FILE > ./tags.json (current directory)
+// Priority: WORKLOG_TAGS_FILE > XDG_CONFIG_HOME/worklog/tags.json > ~/.config/worklog/tags.json
 func GetTagsFile() string {
 	if file := os.Getenv("WORKLOG_TAGS_FILE"); file != "" {
 		return file
 	}
-	return "tags.json"
+	if xdgConfig := os.Getenv("XDG_CONFIG_HOME"); xdgConfig != "" {
+		return filepath.Join(xdgConfig, "worklog", "tags.json")
+	}
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".config", "worklog", "tags.json")
 }
