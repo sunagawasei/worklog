@@ -143,7 +143,7 @@ Start time (HH:MM or HHMM, empty for now)
 
 ### タグのカスタマイズ
 
-カレントディレクトリの `tags.json` を編集してタグを追加・変更できます：
+`~/.config/worklog/tags.json` を編集してタグを追加・変更できます：
 
 ```json
 {
@@ -160,8 +160,9 @@ Start time (HH:MM or HHMM, empty for now)
 }
 ```
 
-**環境変数でカスタマイズ可能：**
-- `WORKLOG_TAGS_FILE` - タグファイルのパスを直接指定
+**タグファイルのパス（優先順位）：**
+1. `WORKLOG_TAGS_FILE` 環境変数で指定したパス
+2. `$XDG_CONFIG_HOME/worklog/tags.json`（デフォルト: `~/.config/worklog/tags.json`）
 
 ### アーキテクチャ
 
