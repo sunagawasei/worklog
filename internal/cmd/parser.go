@@ -70,9 +70,39 @@ func parseTimeArg(timeStr string) (time.Time, error) {
 }
 
 // parseDateArg は日付文字列(YYYY-MM-DD または YYYYMMDD 形式)をtime.Timeに変換する
+// parseRelativeDate は相対日付形式(-1d, -2d等)をパースする
+// 対応しない形式の場合は nil, nil を返す（他のパーサーに処理を委譲）
+// 形式は正しいが値が不正な場合はエラーを返す
+func parseRelativeDate(dateStr string) (*time.Time, error) {
+	var num int
+	var unit string
+
+	// fmt.Sscanf で "-数値単位" 形式をパース
+	n, err := fmt.Sscanf(dateStr, "-%d%s", &num, &unit)
+	if n != 2 || err != nil {
+		return nil, nil // 非マッチ
+	}
+
+	if unit != "d" {
+		return nil, nil // 今は "d" のみサポート
+	}
+
+	// N日前を計算
+	target := time.Now().AddDate(0, 0, -num)
+	result := time.Date(target.Year(), target.Month(), target.Day(), 0, 0, 0, 0, time.Local)
+	return &result, nil
+}
+
 func parseDateArg(dateStr string) (time.Time, error) {
 	if dateStr == "" {
 		return time.Time{}, fmt.Errorf("日付が指定されていません")
+	}
+
+	// 相対日付形式（-1d, -2d等）をまずチェック
+	if relDate, err := parseRelativeDate(dateStr); err != nil {
+		return time.Time{}, err
+	} else if relDate != nil {
+		return *relDate, nil
 	}
 
 	var parsedDate time.Time
