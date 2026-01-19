@@ -40,7 +40,34 @@ const (
 	Arrow  = "▸"
 	Bullet = "•"
 	Square = "■" // BlockSquareと同じ
+
+	// セッション境界マーカー
+	SessionStart = "▶" // U+25B6 セッション開始
+	SessionEnd   = "◀" // U+25C0 セッション終了
 )
+
+// ANSIカラーコード（タイムライン用）
+const (
+	ColorReset   = "\033[0m"
+	ColorRed     = "\033[31m"
+	ColorGreen   = "\033[32m"
+	ColorYellow  = "\033[33m"
+	ColorBlue    = "\033[34m"
+	ColorMagenta = "\033[35m"
+	ColorCyan    = "\033[36m"
+	ColorWhite   = "\033[37m"
+	ColorGray    = "\033[90m"
+)
+
+// プロジェクト用カラーパレット（高視認性）
+var ProjectColors = []string{
+	ColorCyan,    // プロジェクト1: シアン
+	ColorMagenta, // プロジェクト2: マゼンタ
+	ColorYellow,  // プロジェクト3: 黄色
+	ColorGreen,   // プロジェクト4: 緑
+	ColorBlue,    // プロジェクト5: 青
+	ColorRed,     // プロジェクト6: 赤
+}
 
 // FormatDuration は時間を "Xh XXm" 形式にフォーマットする
 func FormatDuration(d time.Duration) string {
