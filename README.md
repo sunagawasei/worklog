@@ -35,8 +35,8 @@ go build -o worklog .
 | `switch`   | プロジェクト切り替え             | `worklog switch "会議" 2`  |
 | `status`   | 現在の状況確認（ダッシュボード） | `worklog status`           |
 | `stop`     | プロジェクト停止                 | `worklog stop`             |
-| `list`     | 本日の作業一覧                   | `worklog list`             |
-| `timeline` | タイムライン表示（9:00-20:00）   | `worklog timeline`         |
+| `list`     | 作業一覧（日付指定可能）         | `worklog list [-1d]`       |
+| `timeline` | タイムライン表示（日付指定可能） | `worklog timeline [-1d]`   |
 | `help`     | ヘルプ表示                       | `worklog help`             |
 
 **タグID**: `tags.json`に定義された数値ID（1, 2, 3...）を使用します
@@ -91,6 +91,11 @@ worklog status
 # プロジェクトごとに異なる記号（■, ▦, ▨）で表示
 # idle時間は · で表示
 worklog timeline
+
+# 過去の記録を確認
+worklog timeline -1d           # 昨日のタイムライン
+worklog timeline 2025-01-15    # 特定日のタイムライン
+worklog timeline 20250115      # 連続形式も対応
 ```
 
 ### 対話モードの例

@@ -21,6 +21,10 @@ type mockProjectManager struct {
 	listOnDateSummaries []domain.ProjectSummary
 	listOnDateError     error
 	calledMethods       []string // 呼ばれたメソッドを記録
+	tags                []domain.Tag
+	tagsError           error
+	recentSummaries     []domain.ProjectSummary
+	recentError         error
 }
 
 func (m *mockProjectManager) New(project, tag string) error {
@@ -66,6 +70,16 @@ func (m *mockProjectManager) SwitchAt(project, tag string, timestamp time.Time) 
 func (m *mockProjectManager) StopAt(timestamp time.Time) error {
 	m.calledMethods = append(m.calledMethods, fmt.Sprintf("StopAt(%v)", timestamp))
 	return m.stopError
+}
+
+func (m *mockProjectManager) GetTags() ([]domain.Tag, error) {
+	m.calledMethods = append(m.calledMethods, "GetTags()")
+	return m.tags, m.tagsError
+}
+
+func (m *mockProjectManager) ListRecent(days int) ([]domain.ProjectSummary, error) {
+	m.calledMethods = append(m.calledMethods, fmt.Sprintf("ListRecent(%d)", days))
+	return m.recentSummaries, m.recentError
 }
 
 // mockTagStorage はテスト用のモック実装
