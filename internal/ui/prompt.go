@@ -273,3 +273,22 @@ func (p *promptUIImpl) InputTime(label string) (string, error) {
 
 	return result, nil
 }
+
+// ConfirmAction はアクションの確認を行う
+func ConfirmAction(message string) (bool, error) {
+	prompt := promptui.Prompt{
+		Label:     message,
+		IsConfirm: true,
+	}
+
+	_, err := prompt.Run()
+	if err != nil {
+		// promptuiはキャンセル時に特定のエラーを返す
+		if err == promptui.ErrAbort {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
+}

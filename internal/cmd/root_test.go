@@ -82,6 +82,16 @@ func (m *mockProjectManager) ListRecent(days int) ([]domain.ProjectSummary, erro
 	return m.recentSummaries, m.recentError
 }
 
+func (m *mockProjectManager) AddTag(name string) (domain.Tag, error) {
+	m.calledMethods = append(m.calledMethods, fmt.Sprintf("AddTag(%s)", name))
+	return domain.Tag{}, nil
+}
+
+func (m *mockProjectManager) DeleteTag(id int) error {
+	m.calledMethods = append(m.calledMethods, fmt.Sprintf("DeleteTag(%d)", id))
+	return nil
+}
+
 // mockTagStorage はテスト用のモック実装
 type mockTagStorage struct {
 	tags []storage.Tag

@@ -25,6 +25,7 @@ func RenderHelp() string {
 	builder.WriteString("  stop      プロジェクトを停止\n")
 	builder.WriteString("  list      本日の作業履歴を表示\n")
 	builder.WriteString("  timeline  本日のタイムラインを表示\n")
+	builder.WriteString("  tag       タグを管理 (list/add/delete)\n")
 	builder.WriteString("  help      ヘルプを表示\n")
 
 	builder.WriteString(renderSeparator(40))

@@ -2,6 +2,7 @@ package project
 
 import (
 	"errors"
+	"os"
 	"testing"
 	"time"
 
@@ -90,6 +91,57 @@ type mockTagStorage struct {
 
 func (m *mockTagStorage) Load() ([]storage.Tag, error) {
 	return m.tags, m.loadError
+}
+
+func (m *mockTagStorage) Save(tags []storage.Tag) error {
+	m.tags = tags
+	return nil
+}
+
+func (m *mockTagStorage) Add(name string) (storage.Tag, error) {
+	// 同名チェック
+	for _, tag := range m.tags {
+		if tag.Name == name {
+			return storage.Tag{}, os.ErrExist
+		}
+	}
+
+	// 最大IDを見つける
+	maxID := 0
+	for _, tag := range m.tags {
+		if tag.ID > maxID {
+			maxID = tag.ID
+		}
+	}
+
+	// 新しいタグを作成
+	newTag := storage.Tag{
+		ID:   maxID + 1,
+		Name: name,
+	}
+
+	m.tags = append(m.tags, newTag)
+	return newTag, nil
+}
+
+func (m *mockTagStorage) Delete(id int) error {
+	// 指定したIDのタグを探して削除
+	found := false
+	newTags := make([]storage.Tag, 0, len(m.tags))
+	for _, tag := range m.tags {
+		if tag.ID == id {
+			found = true
+		} else {
+			newTags = append(newTags, tag)
+		}
+	}
+
+	if !found {
+		return os.ErrNotExist
+	}
+
+	m.tags = newTags
+	return nil
 }
 
 func TestProjectManager_New(t *testing.T) {
@@ -1347,6 +1399,124 @@ func TestProjectManager_GetTags(t *testing.T) {
 		_, err := manager.GetTags()
 		if err == nil {
 			t.Error("エラーが期待されるが、nilが返された")
+		}
+	})
+}
+
+func TestProjectManager_AddTag(t *testing.T) {
+	t.Run("新しいタグを追加", func(t *testing.T) {
+		currentStorage := &mockCurrentStorage{}
+		logStorage := &mockLogStorage{}
+		tagStorage := &mockTagStorage{
+			tags: []storage.Tag{
+				{ID: 1, Name: "開発"},
+				{ID: 2, Name: "会議"},
+			},
+		}
+
+		manager := NewProjectManager(currentStorage, logStorage, tagStorage)
+
+		// 新しいタグを追加
+		newTag, err := manager.AddTag("レビュー")
+		if err != nil {
+			t.Fatalf("AddTag()でエラーが発生: %v", err)
+		}
+
+		// IDが自動採番されているか確認
+		if newTag.ID != 3 {
+			t.Errorf("newTag.ID = %d, want 3", newTag.ID)
+		}
+
+		// 名前が正しいか確認
+		if newTag.Name != "レビュー" {
+			t.Errorf("newTag.Name = %q, want %q", newTag.Name, "レビュー")
+		}
+
+		// タグが追加されたことを確認
+		tags, err := manager.GetTags()
+		if err != nil {
+			t.Fatalf("GetTags()でエラーが発生: %v", err)
+		}
+
+		if len(tags) != 3 {
+			t.Errorf("タグ数が異なる: got %d, want 3", len(tags))
+		}
+	})
+
+	t.Run("同名タグが既に存在する場合はエラー", func(t *testing.T) {
+		currentStorage := &mockCurrentStorage{}
+		logStorage := &mockLogStorage{}
+		tagStorage := &mockTagStorage{
+			tags: []storage.Tag{
+				{ID: 1, Name: "開発"},
+				{ID: 2, Name: "会議"},
+			},
+		}
+
+		manager := NewProjectManager(currentStorage, logStorage, tagStorage)
+
+		// 既に存在するタグ名で追加を試みる
+		_, err := manager.AddTag("開発")
+		if err == nil {
+			t.Error("同名タグの追加でエラーが発生しなかった")
+		}
+	})
+}
+
+func TestProjectManager_DeleteTag(t *testing.T) {
+	t.Run("指定したIDのタグを削除", func(t *testing.T) {
+		currentStorage := &mockCurrentStorage{}
+		logStorage := &mockLogStorage{}
+		tagStorage := &mockTagStorage{
+			tags: []storage.Tag{
+				{ID: 1, Name: "開発"},
+				{ID: 2, Name: "会議"},
+				{ID: 3, Name: "レビュー"},
+			},
+		}
+
+		manager := NewProjectManager(currentStorage, logStorage, tagStorage)
+
+		// ID=2のタグを削除
+		err := manager.DeleteTag(2)
+		if err != nil {
+			t.Fatalf("DeleteTag()でエラーが発生: %v", err)
+		}
+
+		// タグが削除されたことを確認
+		tags, err := manager.GetTags()
+		if err != nil {
+			t.Fatalf("GetTags()でエラーが発生: %v", err)
+		}
+
+		if len(tags) != 2 {
+			t.Errorf("タグ数が異なる: got %d, want 2", len(tags))
+		}
+
+		// 削除されたタグが含まれていないことを確認
+		for _, tag := range tags {
+			if tag.ID == 2 {
+				t.Error("削除されたはずのタグが含まれている")
+			}
+		}
+	})
+
+	t.Run("存在しないIDを指定した場合はエラー", func(t *testing.T) {
+		currentStorage := &mockCurrentStorage{}
+		logStorage := &mockLogStorage{}
+		tagStorage := &mockTagStorage{
+			tags: []storage.Tag{
+				{ID: 1, Name: "開発"},
+				{ID: 2, Name: "会議"},
+			},
+		}
+
+		manager := NewProjectManager(currentStorage, logStorage, tagStorage)
+
+		// 存在しないID=99のタグを削除しようとする
+		err := manager.DeleteTag(99)
+		if err == nil {
+			t.Error("存在しないIDの削除でエラーが発生しなかった")
 		}
 	})
 }

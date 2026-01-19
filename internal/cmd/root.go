@@ -39,6 +39,8 @@ func Execute(manager project.ProjectManager) error {
 		return handleList(manager)
 	case "timeline":
 		return handleTimeline(manager)
+	case "tag":
+		return handleTag(manager)
 	case "help":
 		showHelp()
 		return nil

@@ -28,6 +28,8 @@ type ProjectManager interface {
 	ListOnDate(date time.Time) ([]domain.ProjectSummary, error) // 指定日の一覧
 	ListRecent(days int) ([]domain.ProjectSummary, error)       // 過去N日間の一覧
 	GetTags() ([]domain.Tag, error)                             // タグ一覧を取得
+	AddTag(name string) (domain.Tag, error)                     // タグを追加
+	DeleteTag(id int) error                                     // タグを削除
 
 	// 時刻指定版メソッド
 	NewAt(project, tag string, timestamp time.Time) error    // 指定時刻で新規プロジェクト開始
@@ -550,4 +552,14 @@ func (m *projectManager) ListRecent(days int) ([]domain.ProjectSummary, error) {
 // GetTags はタグ一覧を取得する
 func (m *projectManager) GetTags() ([]domain.Tag, error) {
 	return m.tagStorage.Load()
+}
+
+// AddTag は新しいタグを追加する
+func (m *projectManager) AddTag(name string) (domain.Tag, error) {
+	return m.tagStorage.Add(name)
+}
+
+// DeleteTag は指定したIDのタグを削除する
+func (m *projectManager) DeleteTag(id int) error {
+	return m.tagStorage.Delete(id)
 }

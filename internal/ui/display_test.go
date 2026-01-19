@@ -796,7 +796,7 @@ func TestRenderDashboard_Running_ShortFormat(t *testing.T) {
 		Tag:                "1",
 		TagName:            "Development",
 		StartTime:          startTime,
-		CurrentSessionTime: 38 * time.Minute,            // 現在セッション時間（38分）
+		CurrentSessionTime: 38 * time.Minute,             // 現在セッション時間（38分）
 		TotalTime:          1*time.Hour + 20*time.Minute, // 本日の累計稼働時間
 	}
 
