@@ -398,6 +398,13 @@ func TestProjectManager_Status(t *testing.T) {
 		if status.TotalTime < minExpectedTime {
 			t.Errorf("累計時間が期待値より少ない: got %v, want at least %v", status.TotalTime, minExpectedTime)
 		}
+
+		// 現在セッション時間の確認（新しい検証項目）
+		// 最新のstartは baseTime.Add(2 * time.Hour) なので、現在時刻までの経過時間
+		// テスト実行時刻に依存するため、0以上であることのみ確認
+		if status.CurrentSessionTime < 0 {
+			t.Errorf("現在セッション時間が負の値: got %v", status.CurrentSessionTime)
+		}
 	})
 
 	t.Run("稼働中のプロジェクトがない場合", func(t *testing.T) {

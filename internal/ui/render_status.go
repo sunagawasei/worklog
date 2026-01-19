@@ -37,7 +37,10 @@ func RenderDashboard(status *domain.ProjectStatus, summaries []domain.ProjectSum
 		statusLines = append(statusLines, "")
 	} else {
 		// 稼働中
-		durationStr := FormatDuration(status.TotalTime)
+		// 新しい形式：現在セッション時間 / 累計時間
+		currentSessionStr := FormatDurationShort(status.CurrentSessionTime)
+		totalTimeStr := FormatDurationShort(status.TotalTime)
+		durationStr := fmt.Sprintf("%s / %s", currentSessionStr, totalTimeStr)
 
 		statusLines = append(statusLines, fmt.Sprintf("■ %s running", status.Project))
 		if status.TagName != "" {

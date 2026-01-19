@@ -115,6 +115,7 @@ func (m *projectManager) Status() (*domain.ProjectStatus, error) {
 	// ログから開始時刻と累計時間を取得
 	startTime := time.Now()
 	totalTime := time.Duration(0)
+	currentSessionTime := time.Duration(0)
 
 	logs, err := m.logStorage.ReadToday(project)
 	if err == nil {
@@ -147,16 +148,19 @@ func (m *projectManager) Status() (*domain.ProjectStatus, error) {
 			now := time.Now()
 			duration := now.Sub(*sessionStart)
 			totalTime += duration
+			// 現在セッションの経過時間を計算
+			currentSessionTime = now.Sub(startTime)
 		}
 	}
 
 	// ProjectStatusを作成して返す
 	status := &domain.ProjectStatus{
-		Project:   project,
-		Tag:       tag,
-		TagName:   tagName,
-		StartTime: startTime,
-		TotalTime: totalTime,
+		Project:            project,
+		Tag:                tag,
+		TagName:            tagName,
+		StartTime:          startTime,
+		CurrentSessionTime: currentSessionTime,
+		TotalTime:          totalTime,
 	}
 
 	return status, nil

@@ -28,9 +28,10 @@ type ProjectSummary struct {
 
 // ProjectStatus は現在稼働中のプロジェクトの状態を表す
 type ProjectStatus struct {
-	Project   string
-	Tag       string // タグID
-	TagName   string // タグ名
-	StartTime time.Time
-	TotalTime time.Duration // 本日の累計稼働時間
+	Project            string
+	Tag                string // タグID
+	TagName            string // タグ名
+	StartTime          time.Time
+	CurrentSessionTime time.Duration // 現在セッションの経過時間
+	TotalTime          time.Duration // 本日の累計稼働時間
 }

@@ -710,11 +710,12 @@ func TestRenderDashboard_Running(t *testing.T) {
 	now := time.Date(2025, 9, 30, 11, 30, 0, 0, time.Local)
 
 	status := &domain.ProjectStatus{
-		Project:   "ProjectA",
-		Tag:       "1",
-		TagName:   "Development",
-		StartTime: startTime,
-		TotalTime: 4*time.Hour + 15*time.Minute, // 本日の累計稼働時間
+		Project:            "ProjectA",
+		Tag:                "1",
+		TagName:            "Development",
+		StartTime:          startTime,
+		CurrentSessionTime: 1*time.Hour + 30*time.Minute, // 現在セッションの経過時間（11:30 - 10:00）
+		TotalTime:          4*time.Hour + 15*time.Minute, // 本日の累計稼働時間
 	}
 
 	summaries := []domain.ProjectSummary{
@@ -748,13 +749,14 @@ func TestRenderDashboard_Running(t *testing.T) {
 		t.Errorf("期待: 'running'を含む, 実際: %q", result)
 	}
 
-	// Status部分：開始時刻と累計時間（変更点：経過時間→累計時間）
+	// Status部分：開始時刻と時間表示（新形式：現在セッション時間 / 累計時間）
 	if !strings.Contains(result, "10:00") {
 		t.Errorf("期待: '10:00'を含む, 実際: %q", result)
 	}
 
-	if !strings.Contains(result, "4h 15m") {
-		t.Errorf("期待: '4h 15m'（累計時間）を含む, 実際: %q", result)
+	// 新しい表示形式：「1h 30m / 4h 15m」（現在セッション時間 / 累計時間）
+	if !strings.Contains(result, "1h 30m / 4h 15m") {
+		t.Errorf("期待: '1h 30m / 4h 15m'（現在セッション時間 / 累計時間）を含む, 実際: %q", result)
 	}
 
 	// Status部分：タグ名
@@ -781,6 +783,35 @@ func TestRenderDashboard_Running(t *testing.T) {
 	// Status部分：プログレスバー
 	if !strings.Contains(result, BlockFull) {
 		t.Errorf("期待: プログレスバー（%s）を含む, 実際: %q", BlockFull, result)
+	}
+}
+
+// TestRenderDashboard_Running_ShortFormat は現在セッション時間が1時間未満の場合の短縮形式をテストする
+func TestRenderDashboard_Running_ShortFormat(t *testing.T) {
+	startTime := time.Date(2025, 9, 30, 10, 0, 0, 0, time.Local)
+	now := time.Date(2025, 9, 30, 10, 38, 0, 0, time.Local)
+
+	status := &domain.ProjectStatus{
+		Project:            "ProjectA",
+		Tag:                "1",
+		TagName:            "Development",
+		StartTime:          startTime,
+		CurrentSessionTime: 38 * time.Minute,            // 現在セッション時間（38分）
+		TotalTime:          1*time.Hour + 20*time.Minute, // 本日の累計稼働時間
+	}
+
+	summaries := []domain.ProjectSummary{
+		{
+			Project:   "ProjectA",
+			TotalTime: 1*time.Hour + 20*time.Minute,
+		},
+	}
+
+	result := RenderDashboard(status, summaries, now)
+
+	// 新しい短縮形式：「38m / 1h 20m」（現在セッション時間が1時間未満）
+	if !strings.Contains(result, "38m / 1h 20m") {
+		t.Errorf("期待: '38m / 1h 20m'（短縮形式）を含む, 実際: %q", result)
 	}
 }
 
@@ -941,4 +972,42 @@ func TestRenderTimeline_MultipleProjects(t *testing.T) {
 	if !strings.Contains(result, "ProjectB") {
 		t.Errorf("期待: 'ProjectB'を含む, 実際: %q", result)
 	}
+}
+
+// TestFormatDurationShort は短縮形式の時間フォーマットをテストする
+func TestFormatDurationShort(t *testing.T) {
+	t.Run("0分", func(t *testing.T) {
+		result := FormatDurationShort(0)
+		if result != "0m" {
+			t.Errorf("期待: '0m', 実際: %q", result)
+		}
+	})
+
+	t.Run("1時間未満（分のみ）", func(t *testing.T) {
+		result := FormatDurationShort(38 * time.Minute)
+		if result != "38m" {
+			t.Errorf("期待: '38m', 実際: %q", result)
+		}
+	})
+
+	t.Run("ちょうど1時間", func(t *testing.T) {
+		result := FormatDurationShort(1 * time.Hour)
+		if result != "1h 00m" {
+			t.Errorf("期待: '1h 00m', 実際: %q", result)
+		}
+	})
+
+	t.Run("1時間以上", func(t *testing.T) {
+		result := FormatDurationShort(1*time.Hour + 20*time.Minute)
+		if result != "1h 20m" {
+			t.Errorf("期待: '1h 20m', 実際: %q", result)
+		}
+	})
+
+	t.Run("複数時間", func(t *testing.T) {
+		result := FormatDurationShort(3*time.Hour + 45*time.Minute)
+		if result != "3h 45m" {
+			t.Errorf("期待: '3h 45m', 実際: %q", result)
+		}
+	})
 }

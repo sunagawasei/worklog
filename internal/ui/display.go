@@ -49,6 +49,18 @@ func FormatDuration(d time.Duration) string {
 	return fmt.Sprintf("%dh %02dm", hours, minutes)
 }
 
+// FormatDurationShort は時間を短縮形式でフォーマットする
+// 1時間未満の場合は "XXm"、1時間以上の場合は "Xh XXm" 形式
+func FormatDurationShort(d time.Duration) string {
+	hours := int(d.Hours())
+	minutes := int(d.Minutes()) % 60
+
+	if hours == 0 {
+		return fmt.Sprintf("%dm", minutes)
+	}
+	return fmt.Sprintf("%dh %02dm", hours, minutes)
+}
+
 // renderSeparator は指定された幅の区切り線を生成する
 func renderSeparator(width int) string {
 	return strings.Repeat(LineH, width)
