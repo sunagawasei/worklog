@@ -75,18 +75,14 @@ func RenderTimeline(summaries []domain.ProjectSummary, now time.Time) string {
 	builder.WriteString("\n")
 
 	// 凡例
-	builder.WriteString(" ")
-	for i, summary := range summaries {
-		if i > 0 {
-			builder.WriteString("  ")
-		}
-		builder.WriteString(selectBlockChar(i))
+	for _, summary := range summaries {
+		builder.WriteString(" ")
+		builder.WriteString(selectBlockChar(projectIndexMap[summary.Project]))
 		builder.WriteString(" ")
 		builder.WriteString(summary.Project)
+		builder.WriteString("\n")
 	}
-	if len(summaries) > 0 {
-		builder.WriteString("  ")
-	}
+	builder.WriteString(" ")
 	builder.WriteString(MiddleDot)
 	builder.WriteString(" idle")
 	builder.WriteString("\n")
