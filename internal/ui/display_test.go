@@ -881,8 +881,8 @@ func TestRenderTimeline_SingleProject(t *testing.T) {
 	if !strings.Contains(result, SessionStart) {
 		t.Errorf("期待: セッション開始マーカー（%s）を含む, 実際: %q", SessionStart, result)
 	}
-	if !strings.Contains(result, BlockFull) {
-		t.Errorf("期待: 作業ブロック（%s）を含む, 実際: %q", BlockFull, result)
+	if !strings.Contains(result, BlockSquare) {
+		t.Errorf("期待: 作業ブロック（%s）を含む, 実際: %q", BlockSquare, result)
 	}
 
 	// プロジェクト名が凡例に含まれているか
@@ -927,22 +927,18 @@ func TestRenderTimeline_MultipleProjects(t *testing.T) {
 
 	result := RenderTimeline(summaries, now)
 
-	// セッション開始マーカーとブロックが使用されているか
+	// セッション開始マーカーが使用されているか
 	if !strings.Contains(result, SessionStart) {
 		t.Errorf("期待: セッション開始マーカー（%s）を含む, 実際: %q", SessionStart, result)
 	}
 
-	if !strings.Contains(result, BlockFull) {
-		t.Errorf("期待: 作業ブロック（%s）を含む, 実際: %q", BlockFull, result)
+	// 異なるプロジェクトには異なるブロック文字が使用されているか
+	if !strings.Contains(result, BlockSquare) {
+		t.Errorf("期待: 第1プロジェクトブロック（%s）を含む, 実際: %q", BlockSquare, result)
 	}
 
-	// 異なるプロジェクトには異なる色が使用されているか（ANSIカラーコード）
-	if !strings.Contains(result, ColorCyan) {
-		t.Errorf("期待: 第1プロジェクトのカラー（Cyan）を含む, 実際: %q", result)
-	}
-
-	if !strings.Contains(result, ColorMagenta) {
-		t.Errorf("期待: 第2プロジェクトのカラー（Magenta）を含む, 実際: %q", result)
+	if !strings.Contains(result, BlockCrosshatch) {
+		t.Errorf("期待: 第2プロジェクトブロック（%s）を含む, 実際: %q", BlockCrosshatch, result)
 	}
 
 	// 両プロジェクトが凡例に含まれているか

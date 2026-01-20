@@ -14,16 +14,6 @@ func selectBlockChar(projectIndex int) string {
 	return chars[projectIndex%len(chars)]
 }
 
-// getProjectColor はプロジェクトインデックスに応じた色を返す
-func getProjectColor(projectIndex int) string {
-	return ProjectColors[projectIndex%len(ProjectColors)]
-}
-
-// coloredBlock は色付きブロック文字を返す
-func coloredBlock(projectIndex int, char string) string {
-	return getProjectColor(projectIndex) + char + ColorReset
-}
-
 // sessionPosition はセッション内の位置を表す
 type sessionPosition int
 
@@ -104,13 +94,13 @@ func RenderTimeline(summaries []domain.ProjectSummary, now time.Time) string {
 			// ブロック文字を選択（セッション位置に応じた表示）
 			switch pos {
 			case positionNone:
-				blocks += ColorGray + MiddleDot + ColorReset
+				blocks += MiddleDot
 			case positionStart, positionSingle:
-				// セッション開始時は開始マーカー（色付き）
-				blocks += coloredBlock(projectIndex, SessionStart)
+				// セッション開始時は開始マーカー
+				blocks += SessionStart
 			case positionMiddle, positionEnd:
-				// セッション中間・終了はブロック文字（色付き）
-				blocks += coloredBlock(projectIndex, BlockFull)
+				// セッション中間・終了はプロジェクト固有のブロック文字
+				blocks += selectBlockChar(projectIndex)
 			}
 		}
 
@@ -121,21 +111,21 @@ func RenderTimeline(summaries []domain.ProjectSummary, now time.Time) string {
 	// 空行
 	builder.WriteString("\n")
 
-	// 凡例（色付き）
+	// 凡例
 	builder.WriteString(" ")
 	for i, summary := range summaries {
 		if i > 0 {
 			builder.WriteString("  ")
 		}
-		builder.WriteString(coloredBlock(i, SessionStart))
-		builder.WriteString(coloredBlock(i, BlockFull))
+		builder.WriteString(SessionStart)
+		builder.WriteString(selectBlockChar(i))
 		builder.WriteString(" ")
 		builder.WriteString(summary.Project)
 	}
 	if len(summaries) > 0 {
 		builder.WriteString("  ")
 	}
-	builder.WriteString(ColorGray + MiddleDot + ColorReset)
+	builder.WriteString(MiddleDot)
 	builder.WriteString(" idle")
 	builder.WriteString("\n")
 
