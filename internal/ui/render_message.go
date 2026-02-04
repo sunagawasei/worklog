@@ -45,12 +45,20 @@ func RenderSwitchMessage(oldProject string, oldStartTime, switchTime time.Time, 
 	builder.WriteString(renderSeparator(40))
 	builder.WriteString("\n")
 
-	// 停止したプロジェクト（issue #5コンパクト形式）
+	// 停止したプロジェクト
 	if oldProject != "" {
 		builder.WriteString(fmt.Sprintf("  %s → stopped\n", oldProject))
+
+		// 時間範囲と経過時間（RenderStopMessageと同じ形式）
+		elapsed := switchTime.Sub(oldStartTime)
+		builder.WriteString(fmt.Sprintf("  %s-%s %s %s\n",
+			oldStartTime.Format("15:04"),
+			switchTime.Format("15:04"),
+			Bullet,
+			FormatDuration(elapsed)))
 	}
 
-	// 開始したプロジェクト（issue #5コンパクト形式）
+	// 開始したプロジェクト
 	builder.WriteString(fmt.Sprintf("  %s → running\n", newProject))
 	builder.WriteString(fmt.Sprintf("  %s %s %s\n",
 		switchTime.Format("15:04"),

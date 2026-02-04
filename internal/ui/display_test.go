@@ -533,12 +533,22 @@ func TestRenderSwitchMessage(t *testing.T) {
 
 		result := RenderSwitchMessage(oldProject, oldStartTime, switchTime, newProject, newTag)
 
-		// issue #5形式: "ProjectA → stopped"
+		// 停止したプロジェクト名
 		if !strings.Contains(result, "ProjectA → stopped") {
 			t.Errorf("期待: 'ProjectA → stopped'を含む, 実際: %q", result)
 		}
 
-		// issue #5形式: "ProjectB → running"
+		// 時間範囲が含まれているか（10:00-12:00）
+		if !strings.Contains(result, "10:00-12:00") {
+			t.Errorf("期待: '10:00-12:00'を含む, 実際: %q", result)
+		}
+
+		// 経過時間が含まれているか（2h 00m）
+		if !strings.Contains(result, "2h 00m") {
+			t.Errorf("期待: '2h 00m'を含む, 実際: %q", result)
+		}
+
+		// 開始したプロジェクト
 		if !strings.Contains(result, "ProjectB → running") {
 			t.Errorf("期待: 'ProjectB → running'を含む, 実際: %q", result)
 		}
@@ -551,15 +561,6 @@ func TestRenderSwitchMessage(t *testing.T) {
 		// タグが含まれているか
 		if !strings.Contains(result, "Meeting (2)") {
 			t.Errorf("期待: 'Meeting (2)'を含む, 実際: %q", result)
-		}
-
-		// 時間範囲・経過時間は表示されない（issue #5コンパクト形式）
-		if strings.Contains(result, "10:00-12:00") {
-			t.Errorf("期待: 時間範囲'10:00-12:00'を含まない, 実際: %q", result)
-		}
-
-		if strings.Contains(result, "2h 00m") {
-			t.Errorf("期待: 経過時間'2h 00m'を含まない, 実際: %q", result)
 		}
 
 		// 区切り線が含まれているか
@@ -577,7 +578,7 @@ func TestRenderSwitchMessage(t *testing.T) {
 
 		result := RenderSwitchMessage(oldProject, oldStartTime, switchTime, newProject, newTag)
 
-		// issue #5形式: "ProjectA → running"
+		// 開始したプロジェクト
 		if !strings.Contains(result, "ProjectA → running") {
 			t.Errorf("期待: 'ProjectA → running'を含む, 実際: %q", result)
 		}
@@ -585,6 +586,11 @@ func TestRenderSwitchMessage(t *testing.T) {
 		// 区切り線が含まれているか
 		if !strings.Contains(result, "─") {
 			t.Errorf("期待: 区切り線'─'を含む, 実際: %q", result)
+		}
+
+		// 旧プロジェクトがない場合は経過時間表示なし
+		if strings.Contains(result, "10:00-") {
+			t.Errorf("期待: 時間範囲を含まない, 実際: %q", result)
 		}
 	})
 }
