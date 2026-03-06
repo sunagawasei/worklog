@@ -20,6 +20,7 @@ import (
 type ProjectDisplay struct {
 	Project       string
 	Tag           string
+	TagName       string // タグ名
 	Time          string // 表示用の時間文字列
 	Status        string // 状態アイコン（■ stopped / ▫ paused）
 	IsRunning     bool   // 現在稼働中かどうか
@@ -60,11 +61,14 @@ func getTerminalWidth() int {
 }
 
 // truncateProjectName はプロジェクト名をターミナル幅に合わせて切り詰める
-// termWidth: ターミナルの幅
-func truncateProjectName(project string, termWidth int) string {
+// termWidth: ターミナルの幅、tagWidth: タグ名の表示幅（0の場合はタグなし）
+func truncateProjectName(project string, termWidth int, tagWidth int) string {
 	// 固定要素の幅を計算
 	// "  ▸ " (4) + "  " (2) + timeStr (8) + "  " (2) + status (10) + "  " (2) + dateLabel (13) + margin (5)
 	fixedWidth := 46
+	if tagWidth > 0 {
+		fixedWidth += tagWidth + 2 // タグ名 + "  " セパレーター
+	}
 
 	maxProjectWidth := termWidth - fixedWidth
 	if maxProjectWidth < 12 {
@@ -79,9 +83,10 @@ func truncateProjectName(project string, termWidth int) string {
 	return runewidth.Truncate(project, maxProjectWidth, "…")
 }
 
-// truncateProjectForDisplay はテンプレート関数としてプロジェクト名を切り詰める
-func truncateProjectForDisplay(project string) string {
-	return truncateProjectName(project, getTerminalWidth())
+// truncateProjectWithTag はテンプレート関数としてタグ名を考慮してプロジェクト名を切り詰める
+func truncateProjectWithTag(project, tagName string) string {
+	tagWidth := runewidth.StringWidth(tagName)
+	return truncateProjectName(project, getTerminalWidth(), tagWidth)
 }
 
 // promptUIImpl はPromptUIインターフェースの実装
@@ -184,14 +189,14 @@ func (p *promptUIImpl) SelectProjectFromList(projects []ProjectDisplay) (*Projec
 	// プロジェクトの表示用リストを作成
 	funcMap := template.FuncMap{
 		"faint":           faint,
-		"truncateProject": truncateProjectForDisplay,
+		"truncateProject": truncateProjectWithTag,
 	}
 
 	templates := &promptui.SelectTemplates{
 		Label:    "{{ . }}",
-		Active:   "{{ if .IsSeparator }}    {{ .SeparatorText }}{{ else }}  " + Arrow + " {{ truncateProject .Project }}  {{ .Time }}  {{ .Status }}{{ if .DateLabel }}  {{ .DateLabel }}{{ end }}{{ end }}",
-		Inactive: "{{ if .IsSeparator }}    {{ .SeparatorText }}{{ else }}    {{ truncateProject .Project }}  {{ .Time }}  {{ .Status }}{{ if .DateLabel }}  {{ .DateLabel }}{{ end }}{{ end }}",
-		Selected: "{{ if .IsSeparator }}{{ .SeparatorText }}{{ else }}{{ truncateProject .Project }}  {{ .Time }}  {{ .Status }}{{ if .DateLabel }}  {{ .DateLabel }}{{ end }}{{ end }}",
+		Active:   "{{ if .IsSeparator }}    {{ .SeparatorText }}{{ else }}  " + Arrow + " {{ truncateProject .Project .TagName }}{{ if .TagName }}  {{ faint .TagName }}{{ end }}  {{ .Time }}  {{ .Status }}{{ if .DateLabel }}  {{ .DateLabel }}{{ end }}{{ end }}",
+		Inactive: "{{ if .IsSeparator }}    {{ .SeparatorText }}{{ else }}    {{ truncateProject .Project .TagName }}{{ if .TagName }}  {{ faint .TagName }}{{ end }}  {{ .Time }}  {{ .Status }}{{ if .DateLabel }}  {{ .DateLabel }}{{ end }}{{ end }}",
+		Selected: "{{ if .IsSeparator }}{{ .SeparatorText }}{{ else }}{{ truncateProject .Project .TagName }}{{ if .TagName }}  {{ faint .TagName }}{{ end }}  {{ .Time }}  {{ .Status }}{{ if .DateLabel }}  {{ .DateLabel }}{{ end }}{{ end }}",
 		Details:  "", // Detailsを空文字列に設定してデフォルトを無効化
 		FuncMap:  funcMap,
 	}

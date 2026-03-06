@@ -74,6 +74,7 @@ func handleSwitch(manager project.ProjectManager) error {
 			pd := ui.ProjectDisplay{
 				Project:   summary.Project,
 				Tag:       summary.Tag,
+				TagName:   summary.TagName,
 				Time:      timeStr,
 				Status:    statusIcon,
 				IsRunning: false,
@@ -115,14 +116,7 @@ func handleSwitch(manager project.ProjectManager) error {
 
 		newProject = selected.Project
 		newTag = selected.Tag
-
-		// 選択されたプロジェクトのタグ名を取得
-		for _, summary := range summaries {
-			if summary.Project == newProject {
-				newTagName = summary.TagName
-				break
-			}
-		}
+		newTagName = selected.TagName
 
 		// 対話モードで時刻を入力
 		timeStr, err := promptUI.InputTime("Switch time")

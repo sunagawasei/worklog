@@ -297,7 +297,7 @@ func TestMockPromptUI_SelectProjectFromList_WithSeparator(t *testing.T) {
 
 func TestTruncateProjectName(t *testing.T) {
 	t.Run("プロジェクト名が最大幅以内の場合はそのまま返す", func(t *testing.T) {
-		result := truncateProjectName("短い名前", 80)
+		result := truncateProjectName("短い名前", 80, 0)
 		if result != "短い名前" {
 			t.Errorf("期待値: '短い名前', 実際: '%s'", result)
 		}
@@ -305,7 +305,7 @@ func TestTruncateProjectName(t *testing.T) {
 
 	t.Run("プロジェクト名が最大幅を超える場合は切り詰める", func(t *testing.T) {
 		longName := "とても長いプロジェクト名でターミナル幅を超えてしまうもの"
-		result := truncateProjectName(longName, 80)
+		result := truncateProjectName(longName, 80, 0)
 
 		// 80文字幅の場合、固定要素で46文字使うので、34文字に切り詰められる
 		// 全角文字は2文字幅なので、17文字程度に切り詰められる
@@ -321,7 +321,7 @@ func TestTruncateProjectName(t *testing.T) {
 
 	t.Run("ターミナル幅75文字の場合に適切に切り詰める", func(t *testing.T) {
 		longName := "TASK-003 サービスのカラム追加に伴うbilling-tool修正"
-		result := truncateProjectName(longName, 75)
+		result := truncateProjectName(longName, 75, 0)
 
 		// 切り詰められていることを確認
 		if len(result) >= len(longName) {
@@ -335,11 +335,23 @@ func TestTruncateProjectName(t *testing.T) {
 	})
 
 	t.Run("ターミナル幅が非常に小さい場合でも最低幅を確保", func(t *testing.T) {
-		result := truncateProjectName("プロジェクト名", 30)
+		result := truncateProjectName("プロジェクト名", 30, 0)
 
 		// 最低でも10文字は表示されるべき
 		if displayWidth(result) < 10 {
 			t.Errorf("最低幅が確保されていません: '%s' (width: %d)", result, displayWidth(result))
+		}
+	})
+
+	t.Run("タグ名の幅を考慮してプロジェクト名を切り詰める", func(t *testing.T) {
+		longName := "とても長いプロジェクト名でターミナル幅を超えてしまうもの"
+		// タグ名「開発」(幅4) + スペース2 = 6文字分余分に削る
+		resultWithTag := truncateProjectName(longName, 80, 4)
+		resultWithout := truncateProjectName(longName, 80, 0)
+
+		// タグあり版の方がより短く切り詰められているはず
+		if len(resultWithTag) >= len(resultWithout) {
+			t.Errorf("タグ幅が考慮されていません: withTag='%s', without='%s'", resultWithTag, resultWithout)
 		}
 	})
 }
