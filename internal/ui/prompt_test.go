@@ -3,7 +3,7 @@ package ui
 import (
 	"errors"
 	"testing"
-	"worklog/internal/storage"
+	"worklog/internal/domain"
 )
 
 // テスト用のエラー定義
@@ -19,10 +19,16 @@ type mockPromptUI struct {
 	confirmError         error
 	selectedProjectIndex int
 	selectProjectError   error
+	inputTime            string
+	inputTimeError       error
 }
 
-func (m *mockPromptUI) SelectTag(tags []storage.Tag) (string, error) {
+func (m *mockPromptUI) SelectTag(tags []domain.Tag) (string, error) {
 	return m.selectedTag, m.selectTagError
+}
+
+func (m *mockPromptUI) InputTime(label string) (string, error) {
+	return m.inputTime, m.inputTimeError
 }
 
 func (m *mockPromptUI) InputProject() (string, error) {
@@ -56,7 +62,7 @@ func (m *mockPromptUI) SelectProjectFromList(projects []ProjectDisplay) (*Projec
 func TestPromptUI_SelectTag_EmptyTags(t *testing.T) {
 	// 空のタグリストでエラーが返ることを確認
 	ui := NewPromptUI()
-	_, err := ui.SelectTag([]storage.Tag{})
+	_, err := ui.SelectTag([]domain.Tag{})
 	if err == nil {
 		t.Error("空のタグリストでエラーが返るべき")
 	}
@@ -67,7 +73,7 @@ func TestMockPromptUI_SelectTag(t *testing.T) {
 		selectedTag: "1",
 	}
 
-	tags := []storage.Tag{
+	tags := []domain.Tag{
 		{ID: 1, Name: "開発"},
 		{ID: 2, Name: "会議"},
 	}
@@ -358,7 +364,7 @@ func TestTruncateProjectName(t *testing.T) {
 
 func TestGetTerminalWidth(t *testing.T) {
 	t.Run("ターミナル幅が取得できる場合", func(t *testing.T) {
-		width := getTerminalWidth()
+		width := GetTerminalWidth()
 
 		// テスト環境によってはターミナルがない可能性があるので、
 		// デフォルト値（80）が返されるか、正の値が返されることを確認

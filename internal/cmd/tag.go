@@ -103,7 +103,7 @@ func handleTagDelete(manager project.ProjectManager) error {
 	}
 
 	// 削除確認プロンプト
-	confirmed, err := ui.ConfirmAction(fmt.Sprintf("タグ \"%s\" を削除しますか？", targetTag.Name))
+	confirmed, err := ui.NewPromptUI().ConfirmAction(fmt.Sprintf("タグ \"%s\" を削除", targetTag.Name))
 	if err != nil {
 		return fmt.Errorf("確認プロンプトでエラーが発生しました: %w", err)
 	}

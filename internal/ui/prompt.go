@@ -5,7 +5,6 @@ package ui
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"text/template"
 
@@ -13,7 +12,6 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/mattn/go-runewidth"
-	"golang.org/x/term"
 )
 
 // ProjectDisplay は選択リストで表示するプロジェクト情報
@@ -49,17 +47,6 @@ func faint(s string) string {
 	return s
 }
 
-// getTerminalWidth はターミナルの幅を取得する
-// 取得できない場合はデフォルト値（80）を返す
-func getTerminalWidth() int {
-	fd := int(os.Stdout.Fd())
-	width, _, err := term.GetSize(fd)
-	if err != nil || width <= 0 {
-		return 80 // デフォルト幅
-	}
-	return width
-}
-
 // truncateProjectName はプロジェクト名をターミナル幅に合わせて切り詰める
 // termWidth: ターミナルの幅、tagWidth: タグ名の表示幅（0の場合はタグなし）
 func truncateProjectName(project string, termWidth int, tagWidth int) string {
@@ -86,7 +73,7 @@ func truncateProjectName(project string, termWidth int, tagWidth int) string {
 // truncateProjectWithTag はテンプレート関数としてタグ名を考慮してプロジェクト名を切り詰める
 func truncateProjectWithTag(project, tagName string) string {
 	tagWidth := runewidth.StringWidth(tagName)
-	return truncateProjectName(project, getTerminalWidth(), tagWidth)
+	return truncateProjectName(project, GetTerminalWidth(), tagWidth)
 }
 
 // promptUIImpl はPromptUIインターフェースの実装
@@ -279,21 +266,3 @@ func (p *promptUIImpl) InputTime(label string) (string, error) {
 	return result, nil
 }
 
-// ConfirmAction はアクションの確認を行う
-func ConfirmAction(message string) (bool, error) {
-	prompt := promptui.Prompt{
-		Label:     message,
-		IsConfirm: true,
-	}
-
-	_, err := prompt.Run()
-	if err != nil {
-		// promptuiはキャンセル時に特定のエラーを返す
-		if err == promptui.ErrAbort {
-			return false, nil
-		}
-		return false, err
-	}
-
-	return true, nil
-}

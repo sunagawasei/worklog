@@ -4,10 +4,12 @@ package ui
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/mattn/go-runewidth"
+	"golang.org/x/term"
 )
 
 // ボックス描画文字の定数
@@ -59,6 +61,17 @@ func FormatDurationShort(d time.Duration) string {
 		return fmt.Sprintf("%dm", minutes)
 	}
 	return fmt.Sprintf("%dh %02dm", hours, minutes)
+}
+
+// GetTerminalWidth はターミナルの幅を取得する
+// 取得できない場合はデフォルト値（80）を返す
+func GetTerminalWidth() int {
+	fd := int(os.Stdout.Fd())
+	width, _, err := term.GetSize(fd)
+	if err != nil || width <= 0 {
+		return 80 // デフォルト幅
+	}
+	return width
 }
 
 // renderSeparator は指定された幅の区切り線を生成する
