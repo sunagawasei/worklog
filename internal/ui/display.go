@@ -38,6 +38,13 @@ const (
 	BlockDiagonalPattern = "▨" // U+25A8 Square with Upper Right to Lower Left Fill
 	MiddleDot            = "·" // U+00B7 Middle Dot (idle用)
 
+	// 二重線（重要度の高い区切りに使用）
+	LineH2   = "═" // 二重水平線
+	CrossB2  = "╧" // 二重水平・単一垂直のT字接続（下）
+
+	// ドットリーダー
+	DotLeader = "·" // 列揃え用ドット（MiddleDotと同じ文字）
+
 	// インジケーター
 	Arrow  = "▸"
 	Bullet = "•"

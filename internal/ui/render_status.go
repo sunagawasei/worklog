@@ -28,41 +28,31 @@ func RenderDashboard(status *domain.ProjectStatus, summaries []domain.ProjectSum
 		avgTime = totalTime / time.Duration(projectCount)
 	}
 
-	// Status部分の内容を準備
+	// Status部分の内容を準備（Phase 2 #5: 配置ロジック簡素化）
 	var statusLines []string
 	if status == nil {
 		// アイドル状態
-		statusLines = append(statusLines, "稼働中のプロジェクトは")
-		statusLines = append(statusLines, "ありません")
-		statusLines = append(statusLines, "")
+		statusLines = []string{
+			"稼働中のプロジェクトは",
+			"ありません",
+		}
 	} else {
-		// 稼働中
-		// 新しい形式：現在セッション時間 / 累計時間
+		// 稼働中：現在セッション時間 / 累計時間
 		currentSessionStr := FormatDurationShort(status.CurrentSessionTime)
 		totalTimeStr := FormatDurationShort(status.TotalTime)
 		durationStr := fmt.Sprintf("%s / %s", currentSessionStr, totalTimeStr)
 
-		statusLines = append(statusLines, fmt.Sprintf("■ %s running", status.Project))
-		if status.TagName != "" {
-			statusLines = append(statusLines, fmt.Sprintf("%s • %s", status.StartTime.Format("15:04"), durationStr))
-			statusLines = append(statusLines, status.TagName)
-		} else {
-			statusLines = append(statusLines, fmt.Sprintf("%s • %s", status.StartTime.Format("15:04"), durationStr))
-			statusLines = append(statusLines, "")
+		statusLines = []string{
+			fmt.Sprintf("■ %s running", status.Project),
+			fmt.Sprintf("%s • %s", status.StartTime.Format("15:04"), durationStr),
 		}
-
-		// プログレスバーを追加（totalTimeが0より大きい場合）
+		if status.TagName != "" {
+			statusLines = append(statusLines, status.TagName)
+		}
+		// プログレスバーは常に最終行に追加（Phase 2 #6: 実時間/目標時間表示）
 		if totalTime > 0 {
-			percent := float64(totalTime) / float64(8*time.Hour) // 8時間を100%と想定
-			progressBar := RenderProgressBar(percent, 16)
-			// プログレスバーを追加する代わりに、statusLinesを調整
-			if len(statusLines) > 2 && statusLines[2] != "" {
-				// タグ名がある場合は、プログレスバーを追加
-				statusLines = append(statusLines, progressBar)
-			} else {
-				// タグ名がない場合は、空行をプログレスバーに置き換え
-				statusLines[2] = progressBar
-			}
+			progressBar := RenderTimeProgressBar(totalTime, 8*time.Hour, 16)
+			statusLines = append(statusLines, progressBar)
 		}
 	}
 
