@@ -7,11 +7,42 @@ import (
 	"fmt"
 	"strconv"
 	"text/template"
+	"time"
 
 	"worklog/internal/domain"
 
 	"github.com/manifoldco/promptui"
 	"github.com/mattn/go-runewidth"
+)
+
+// promptui テンプレート（Phase 4 #11: 可読性のため定数として定義）
+const (
+	selectProjectActiveTemplate = "{{ if .IsSeparator }}" +
+		"    {{ .SeparatorText }}" +
+		"{{ else }}" +
+		"  " + Arrow + " {{ truncateProject .Project .TagName }}" +
+		"{{ if .TagName }}  {{ faint .TagName }}{{ end }}" +
+		"  {{ .Time }}  {{ .Status }}" +
+		"{{ if .DateLabel }}  {{ .DateLabel }}{{ end }}" +
+		"{{ end }}"
+
+	selectProjectInactiveTemplate = "{{ if .IsSeparator }}" +
+		"    {{ .SeparatorText }}" +
+		"{{ else }}" +
+		"    {{ truncateProject .Project .TagName }}" +
+		"{{ if .TagName }}  {{ faint .TagName }}{{ end }}" +
+		"  {{ .Time }}  {{ .Status }}" +
+		"{{ if .DateLabel }}  {{ .DateLabel }}{{ end }}" +
+		"{{ end }}"
+
+	selectProjectSelectedTemplate = "{{ if .IsSeparator }}" +
+		"{{ .SeparatorText }}" +
+		"{{ else }}" +
+		"{{ truncateProject .Project .TagName }}" +
+		"{{ if .TagName }}  {{ faint .TagName }}{{ end }}" +
+		"  {{ .Time }}  {{ .Status }}" +
+		"{{ if .DateLabel }}  {{ .DateLabel }}{{ end }}" +
+		"{{ end }}"
 )
 
 // ProjectDisplay は選択リストで表示するプロジェクト情報
@@ -105,7 +136,7 @@ func (p *promptUIImpl) SelectTag(tags []domain.Tag) (string, error) {
 	}
 
 	// ヘッダーとヒントを含むラベル
-	label := fmt.Sprintf("Select tag\n%s", renderSeparator(38))
+	label := fmt.Sprintf("タグを選択\n%s", renderSeparator(38))
 
 	prompt := promptui.Select{
 		Label:     label,
@@ -136,7 +167,7 @@ func (p *promptUIImpl) InputProject() (string, error) {
 	}
 
 	prompt := promptui.Prompt{
-		Label:    "Project name",
+		Label:    "プロジェクト名",
 		Validate: validate,
 	}
 
@@ -181,15 +212,15 @@ func (p *promptUIImpl) SelectProjectFromList(projects []ProjectDisplay) (*Projec
 
 	templates := &promptui.SelectTemplates{
 		Label:    "{{ . }}",
-		Active:   "{{ if .IsSeparator }}    {{ .SeparatorText }}{{ else }}  " + Arrow + " {{ truncateProject .Project .TagName }}{{ if .TagName }}  {{ faint .TagName }}{{ end }}  {{ .Time }}  {{ .Status }}{{ if .DateLabel }}  {{ .DateLabel }}{{ end }}{{ end }}",
-		Inactive: "{{ if .IsSeparator }}    {{ .SeparatorText }}{{ else }}    {{ truncateProject .Project .TagName }}{{ if .TagName }}  {{ faint .TagName }}{{ end }}  {{ .Time }}  {{ .Status }}{{ if .DateLabel }}  {{ .DateLabel }}{{ end }}{{ end }}",
-		Selected: "{{ if .IsSeparator }}{{ .SeparatorText }}{{ else }}{{ truncateProject .Project .TagName }}{{ if .TagName }}  {{ faint .TagName }}{{ end }}  {{ .Time }}  {{ .Status }}{{ if .DateLabel }}  {{ .DateLabel }}{{ end }}{{ end }}",
+		Active:   selectProjectActiveTemplate,
+		Inactive: selectProjectInactiveTemplate,
+		Selected: selectProjectSelectedTemplate,
 		Details:  "", // Detailsを空文字列に設定してデフォルトを無効化
 		FuncMap:  funcMap,
 	}
 
 	// ヘッダーとヒントを含むラベル
-	label := fmt.Sprintf("Select project\n%s", renderSeparator(38))
+	label := fmt.Sprintf("プロジェクトを選択\n%s", renderSeparator(38))
 
 	prompt := promptui.Select{
 		Label:     label,
@@ -203,9 +234,12 @@ func (p *promptUIImpl) SelectProjectFromList(projects []ProjectDisplay) (*Projec
 		return nil, err
 	}
 
-	// セパレーターが選択された場合は再度選択を促す
-	if projects[i].IsSeparator {
-		return p.SelectProjectFromList(projects)
+	// セパレーターが選択された場合は再選択（再帰呼び出しを避けてforループを使用）
+	for projects[i].IsSeparator {
+		i, _, err = prompt.Run()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &projects[i], nil
@@ -252,8 +286,9 @@ func (p *promptUIImpl) InputTime(label string) (string, error) {
 		return nil
 	}
 
+	now := time.Now().Format("15:04")
 	prompt := promptui.Prompt{
-		Label:    fmt.Sprintf("%s (HH:MM or HHMM, empty for now)", label),
+		Label:    fmt.Sprintf("%s (HH:MM, 空欄で現在時刻 = %s)", label, now),
 		Validate: validate,
 		Default:  "", // デフォルトは空欄（現在時刻）
 	}
