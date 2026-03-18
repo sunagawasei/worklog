@@ -6,31 +6,41 @@ import (
 	"time"
 )
 
+// renderRoundBox は丸角ボックス内に行を表示する
+// 形式:
+//
+//	╭────────────────────────────────────────╮
+//	│  content                               │
+//	╰────────────────────────────────────────╯
+func renderRoundBox(lines []string, width int) string {
+	var builder strings.Builder
+	innerWidth := width - 4 // "│ " と " │" で4文字使用
+
+	builder.WriteString(RoundTL + strings.Repeat(LineH, width-2) + RoundTR + "\n")
+	for _, line := range lines {
+		content := padString(line, innerWidth)
+		builder.WriteString(LineV + "  " + content + "  " + LineV + "\n")
+	}
+	builder.WriteString(RoundBL + strings.Repeat(LineH, width-2) + RoundBR + "\n")
+
+	return builder.String()
+}
+
 // RenderStopMessage は停止完了メッセージを整形して表示する
 // project: プロジェクト名
 // startTime: 開始時刻
 // stopTime: 停止時刻
 func RenderStopMessage(project string, startTime, stopTime time.Time) string {
-	var builder strings.Builder
-
-	builder.WriteString(renderSeparator(40))
-	builder.WriteString("\n")
-
-	// プロジェクト名と状態
-	builder.WriteString(fmt.Sprintf("  %s stopped\n", project))
-
-	// 時間範囲と経過時間
 	elapsed := stopTime.Sub(startTime)
-	builder.WriteString(fmt.Sprintf("  %s-%s %s %s\n",
-		startTime.Format("15:04"),
-		stopTime.Format("15:04"),
-		Bullet,
-		FormatDuration(elapsed)))
-
-	builder.WriteString(renderSeparator(40))
-	builder.WriteString("\n")
-
-	return builder.String()
+	lines := []string{
+		fmt.Sprintf("%s stopped", project),
+		fmt.Sprintf("%s-%s %s %s",
+			startTime.Format("15:04"),
+			stopTime.Format("15:04"),
+			Bullet,
+			FormatDuration(elapsed)),
+	}
+	return renderRoundBox(lines, 40)
 }
 
 // RenderSwitchMessage はプロジェクト切り替えの状態遷移を整形して表示する
@@ -40,18 +50,13 @@ func RenderStopMessage(project string, startTime, stopTime time.Time) string {
 // newProject: 開始したプロジェクト名
 // newTag: 開始したプロジェクトのタグ表示
 func RenderSwitchMessage(oldProject string, oldStartTime, switchTime time.Time, newProject, newTag string) string {
-	var builder strings.Builder
-
-	builder.WriteString(renderSeparator(40))
-	builder.WriteString("\n")
+	var lines []string
 
 	// 停止したプロジェクト
 	if oldProject != "" {
-		builder.WriteString(fmt.Sprintf("  %s → stopped\n", oldProject))
-
-		// 時間範囲と経過時間（RenderStopMessageと同じ形式）
 		elapsed := switchTime.Sub(oldStartTime)
-		builder.WriteString(fmt.Sprintf("  %s-%s %s %s\n",
+		lines = append(lines, fmt.Sprintf("%s → stopped", oldProject))
+		lines = append(lines, fmt.Sprintf("%s-%s %s %s",
 			oldStartTime.Format("15:04"),
 			switchTime.Format("15:04"),
 			Bullet,
@@ -59,16 +64,13 @@ func RenderSwitchMessage(oldProject string, oldStartTime, switchTime time.Time, 
 	}
 
 	// 開始したプロジェクト
-	builder.WriteString(fmt.Sprintf("  %s → running\n", newProject))
-	builder.WriteString(fmt.Sprintf("  %s %s %s\n",
+	lines = append(lines, fmt.Sprintf("%s → running", newProject))
+	lines = append(lines, fmt.Sprintf("%s %s %s",
 		switchTime.Format("15:04"),
 		Bullet,
 		newTag))
 
-	builder.WriteString(renderSeparator(40))
-	builder.WriteString("\n")
-
-	return builder.String()
+	return renderRoundBox(lines, 40)
 }
 
 // RenderNewMessage は新規プロジェクト開始メッセージを整形して表示する
@@ -76,20 +78,9 @@ func RenderSwitchMessage(oldProject string, oldStartTime, switchTime time.Time, 
 // startTime: 開始時刻
 // tag: タグ表示
 func RenderNewMessage(project string, startTime time.Time, tag string) string {
-	var builder strings.Builder
-
-	builder.WriteString(renderSeparator(40))
-	builder.WriteString("\n")
-
-	// プロジェクト開始
-	builder.WriteString(fmt.Sprintf("  %s started\n", project))
-	builder.WriteString(fmt.Sprintf("  %s %s %s\n",
-		startTime.Format("15:04"),
-		Bullet,
-		tag))
-
-	builder.WriteString(renderSeparator(40))
-	builder.WriteString("\n")
-
-	return builder.String()
+	lines := []string{
+		fmt.Sprintf("%s started", project),
+		fmt.Sprintf("%s %s %s", startTime.Format("15:04"), Bullet, tag),
+	}
+	return renderRoundBox(lines, 40)
 }

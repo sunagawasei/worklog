@@ -26,6 +26,12 @@ const (
 	CrossR   = "┤" // T字接続（右）
 	Cross    = "┼" // 十字接続
 
+	// 丸角ボックス（メッセージ系で使用、ダッシュボードの直角と区別）
+	RoundTL = "╭" // 丸左上角
+	RoundTR = "╮" // 丸右上角
+	RoundBL = "╰" // 丸左下角
+	RoundBR = "╯" // 丸右下角
+
 	// プログレス用
 	BlockFull  = "█"
 	BlockDark  = "▓"
