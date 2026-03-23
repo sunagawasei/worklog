@@ -18,16 +18,8 @@ func handleSwitch(manager project.ProjectManager) error {
 		newProject = os.Args[2]
 		newTag = os.Args[3]
 		// タグ名を取得
-		tags, err := manager.GetTags()
-		if err == nil {
-			id := 0
-			fmt.Sscanf(newTag, "%d", &id)
-			for _, t := range tags {
-				if t.ID == id {
-					newTagName = t.Name
-					break
-				}
-			}
+		if tags, err := manager.GetTags(); err == nil {
+			newTagName = resolveTagName(tags, newTag)
 		}
 	} else {
 		// 対話モード：過去2週間のプロジェクトリストから選択
@@ -146,7 +138,7 @@ func handleSwitch(manager project.ProjectManager) error {
 		} else {
 			// 空欄の場合は現在時刻を使用
 			switchTime = time.Now()
-			if err := manager.Switch(newProject, newTag); err != nil {
+			if err := manager.SwitchAt(newProject, newTag, time.Now()); err != nil {
 				return err
 			}
 		}
@@ -186,7 +178,7 @@ func handleSwitch(manager project.ProjectManager) error {
 		}
 	} else {
 		switchTime = time.Now()
-		if err := manager.Switch(newProject, newTag); err != nil {
+		if err := manager.SwitchAt(newProject, newTag, time.Now()); err != nil {
 			return err
 		}
 	}

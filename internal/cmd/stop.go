@@ -55,7 +55,7 @@ func handleStop(manager project.ProjectManager) error {
 		} else {
 			// 空欄の場合は現在時刻を使用
 			stopTime = time.Now()
-			if err := manager.Stop(); err != nil {
+			if err := manager.StopAt(time.Now()); err != nil {
 				return err
 			}
 		}

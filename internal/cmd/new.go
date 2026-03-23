@@ -19,18 +19,8 @@ func handleNew(manager project.ProjectManager) error {
 		projectName = os.Args[2]
 		tagID = os.Args[3]
 		// タグ名を取得
-		tags, err := manager.GetTags()
-		if err == nil {
-			// タグIDを数値に変換
-			id := 0
-			fmt.Sscanf(tagID, "%d", &id)
-			// 対応するタグ名を検索
-			for _, t := range tags {
-				if t.ID == id {
-					tagName = t.Name
-					break
-				}
-			}
+		if tags, err := manager.GetTags(); err == nil {
+			tagName = resolveTagName(tags, tagID)
 		}
 	} else {
 		// 対話モード
@@ -55,14 +45,7 @@ func handleNew(manager project.ProjectManager) error {
 		}
 
 		// 選択されたタグ名を取得
-		id := 0
-		fmt.Sscanf(tagID, "%d", &id)
-		for _, t := range tags {
-			if t.ID == id {
-				tagName = t.Name
-				break
-			}
-		}
+		tagName = resolveTagName(tags, tagID)
 
 		// 対話モードで時刻を入力
 		timeStr, err := promptUI.InputTime("開始時刻")
@@ -90,7 +73,7 @@ func handleNew(manager project.ProjectManager) error {
 		} else {
 			// 空欄の場合は現在時刻を使用
 			startTime = time.Now()
-			if err := manager.New(projectName, tagID); err != nil {
+			if err := manager.NewAt(projectName, tagID, startTime); err != nil {
 				return err
 			}
 		}
@@ -129,7 +112,7 @@ func handleNew(manager project.ProjectManager) error {
 		}
 	} else {
 		startTime = time.Now()
-		if err := manager.New(projectName, tagID); err != nil {
+		if err := manager.NewAt(projectName, tagID, time.Now()); err != nil {
 			return err
 		}
 	}
