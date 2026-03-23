@@ -56,17 +56,12 @@ func RenderList(summaries []domain.ProjectSummary, now time.Time) string {
 
 	// 各プロジェクト（プロジェクト間に空行）
 	totalDuration := time.Duration(0)
-	for i, summary := range summaries {
+	for _, summary := range summaries {
 		durationStr := FormatDuration(summary.TotalTime)
 		totalDuration += summary.TotalTime
 
-		// プロジェクト間の空行（最初の項目以外）
-		if i > 0 {
-			builder.WriteString(fmt.Sprintf("      %s\n", LineV))
-		} else {
-			// 最初のプロジェクト前の空行
-			builder.WriteString(fmt.Sprintf("      %s\n", LineV))
-		}
+		// プロジェクト間の空行
+		builder.WriteString(fmt.Sprintf("      %s\n", LineV))
 
 		// プロジェクト名行（ドットリーダーで右揃え時間）
 		var leftPart string

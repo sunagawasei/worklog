@@ -12,6 +12,15 @@ import (
 	"golang.org/x/term"
 )
 
+// StandardWidth はメッセージ・ヘルプ・タグ・エラー表示の統一幅
+const StandardWidth = 44
+
+// ダッシュボードのカラム幅定数
+const (
+	dashStatusCol  = 24 // Status列の内容幅
+	dashSummaryCol = 22 // Summary列の内容幅
+)
+
 // ボックス描画文字の定数
 const (
 	LineH    = "─" // 水平線
@@ -34,8 +43,6 @@ const (
 
 	// プログレス用
 	BlockFull  = "█"
-	BlockDark  = "▓"
-	BlockMid   = "▒"
 	BlockLight = "░"
 
 	// タイムライン用（Geist Font 1.5.0対応）
@@ -54,7 +61,6 @@ const (
 	// インジケーター
 	Arrow  = "▸"
 	Bullet = "•"
-	Square = "■" // BlockSquareと同じ
 )
 
 // FormatDuration は時間を "Xh XXm" 形式にフォーマットする

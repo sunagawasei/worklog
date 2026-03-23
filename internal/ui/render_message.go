@@ -40,7 +40,7 @@ func RenderStopMessage(project string, startTime, stopTime time.Time) string {
 			Bullet,
 			FormatDuration(elapsed)),
 	}
-	return renderRoundBox(lines, 40)
+	return renderRoundBox(lines, StandardWidth)
 }
 
 // RenderSwitchMessage はプロジェクト切り替えの状態遷移を整形して表示する
@@ -70,7 +70,7 @@ func RenderSwitchMessage(oldProject string, oldStartTime, switchTime time.Time, 
 		Bullet,
 		newTag))
 
-	return renderRoundBox(lines, 40)
+	return renderRoundBox(lines, StandardWidth)
 }
 
 // RenderNewMessage は新規プロジェクト開始メッセージを整形して表示する
@@ -82,5 +82,5 @@ func RenderNewMessage(project string, startTime time.Time, tag string) string {
 		fmt.Sprintf("%s started", project),
 		fmt.Sprintf("%s %s %s", startTime.Format("15:04"), Bullet, tag),
 	}
-	return renderRoundBox(lines, 40)
+	return renderRoundBox(lines, StandardWidth)
 }

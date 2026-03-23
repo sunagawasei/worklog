@@ -63,8 +63,15 @@ func RenderDashboard(status *domain.ProjectStatus, summaries []domain.ProjectSum
 		fmt.Sprintf("Average     %s", FormatDuration(avgTime)),
 	}
 
-	// 上部境界線
-	builder.WriteString("┌─ Status ─────────────────┬─ Summary ──────────────┐\n")
+	// 上部境界線（カラム幅から動的生成）
+	statusLabel := "─ Status "
+	summaryLabel := "─ Summary "
+	topLine := CornerTL +
+		statusLabel + strings.Repeat(LineH, dashStatusCol+2-displayWidth(statusLabel)) +
+		CrossT +
+		summaryLabel + strings.Repeat(LineH, dashSummaryCol+2-displayWidth(summaryLabel)) +
+		CornerTR + "\n"
+	builder.WriteString(topLine)
 
 	// 各行を描画（最大行数を決定）
 	maxLines := len(statusLines)
@@ -74,77 +81,33 @@ func RenderDashboard(status *domain.ProjectStatus, summaries []domain.ProjectSum
 
 	for i := 0; i < maxLines; i++ {
 		// Status部分
-		builder.WriteString("│ ")
+		builder.WriteString(LineV + " ")
 		if i < len(statusLines) {
-			builder.WriteString(padString(statusLines[i], 24))
+			builder.WriteString(padString(statusLines[i], dashStatusCol))
 		} else {
-			builder.WriteString(strings.Repeat(" ", 24))
+			builder.WriteString(strings.Repeat(" ", dashStatusCol))
 		}
 
 		// 区切り
-		builder.WriteString(" │ ")
+		builder.WriteString(" " + LineV + " ")
 
 		// Summary部分
 		if i < len(summaryLines) {
-			builder.WriteString(padString(summaryLines[i], 22))
+			builder.WriteString(padString(summaryLines[i], dashSummaryCol))
 		} else {
-			builder.WriteString(strings.Repeat(" ", 22))
+			builder.WriteString(strings.Repeat(" ", dashSummaryCol))
 		}
 
-		builder.WriteString(" │\n")
+		builder.WriteString(" " + LineV + "\n")
 	}
 
-	// 下部境界線
-	builder.WriteString("└──────────────────────────┴────────────────────────┘\n")
-
-	return builder.String()
-}
-
-// RenderStatus は現在の稼働状況を整形して表示する
-// statusがnilの場合はアイドル状態として表示
-// todayTotal: 今日の合計作業時間（プログレスバー計算用）
-func RenderStatus(status *domain.ProjectStatus, now time.Time, todayTotal time.Duration) string {
-	var builder strings.Builder
-
-	// 区切り線
-	builder.WriteString(renderSeparator(38))
-	builder.WriteString("\n")
-
-	if status == nil {
-		// アイドル状態
-		builder.WriteString("  稼働中のプロジェクトはありません\n")
-	} else {
-		// 稼働中
-		builder.WriteString(fmt.Sprintf("  %s %s running\n",
-			status.Project,
-			Arrow))
-
-		// 経過時間を計算
-		elapsed := now.Sub(status.StartTime)
-		durationStr := FormatDuration(elapsed)
-
-		// タグ名がある場合は表示
-		if status.TagName != "" {
-			builder.WriteString(fmt.Sprintf("  %s %s %s %s %s\n",
-				status.StartTime.Format("15:04"),
-				Bullet,
-				durationStr,
-				Bullet,
-				status.TagName))
-		} else {
-			builder.WriteString(fmt.Sprintf("  %s %s %s\n",
-				status.StartTime.Format("15:04"),
-				Bullet,
-				durationStr))
-		}
-
-		// プログレスバーを表示（todayTotalが0より大きい場合）
-		if todayTotal > 0 {
-			percent := float64(todayTotal) / float64(8*time.Hour) // 8時間を100%と想定
-			progressBar := RenderProgressBar(percent, 20)
-			builder.WriteString(fmt.Sprintf("  %s\n", progressBar))
-		}
-	}
+	// 下部境界線（カラム幅から動的生成）
+	bottomLine := CornerBL +
+		strings.Repeat(LineH, dashStatusCol+2) +
+		CrossB +
+		strings.Repeat(LineH, dashSummaryCol+2) +
+		CornerBR + "\n"
+	builder.WriteString(bottomLine)
 
 	return builder.String()
 }

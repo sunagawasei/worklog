@@ -14,7 +14,7 @@ func RenderHelp() string {
 	builder.WriteString("worklog ")
 	builder.WriteString(Bullet)
 	builder.WriteString(" プロジェクト稼働時間管理\n")
-	builder.WriteString(renderSeparator(40))
+	builder.WriteString(renderSeparator(StandardWidth))
 	builder.WriteString("\n")
 
 	builder.WriteString("Usage\n")
@@ -44,7 +44,7 @@ func RenderHelp() string {
 	builder.WriteString("  worklog stop 18:00             # 18:00に停止\n")
 	builder.WriteString("  worklog timeline -1d           # 昨日のタイムライン\n")
 
-	builder.WriteString(renderSeparator(40))
+	builder.WriteString(renderSeparator(StandardWidth))
 	builder.WriteString("\n")
 
 	return builder.String()
@@ -54,12 +54,12 @@ func RenderHelp() string {
 func RenderError(message string) string {
 	var builder strings.Builder
 
-	builder.WriteString(renderSeparator(40))
+	builder.WriteString(renderSeparator(StandardWidth))
 	builder.WriteString("\n")
 	builder.WriteString(fmt.Sprintf("  [!] %s\n", message))
 	builder.WriteString("  \n")
 	builder.WriteString("  Try 'worklog help' for available commands\n")
-	builder.WriteString(renderSeparator(40))
+	builder.WriteString(renderSeparator(StandardWidth))
 	builder.WriteString("\n")
 
 	return builder.String()
@@ -70,7 +70,7 @@ func RenderTagList(tags []domain.Tag) string {
 	var builder strings.Builder
 
 	builder.WriteString("Tags\n")
-	builder.WriteString(renderSeparator(40))
+	builder.WriteString(renderSeparator(StandardWidth))
 	builder.WriteString("\n")
 
 	if len(tags) == 0 {
@@ -81,7 +81,7 @@ func RenderTagList(tags []domain.Tag) string {
 		}
 	}
 
-	builder.WriteString(renderSeparator(40))
+	builder.WriteString(renderSeparator(StandardWidth))
 	builder.WriteString("\n")
 
 	return builder.String()
@@ -91,12 +91,12 @@ func RenderTagList(tags []domain.Tag) string {
 func RenderTagAdded(tag domain.Tag) string {
 	var builder strings.Builder
 
-	builder.WriteString(renderSeparator(40))
+	builder.WriteString(renderSeparator(StandardWidth))
 	builder.WriteString("\n")
 
 	builder.WriteString(fmt.Sprintf("  Tag added: %s (ID: %d)\n", tag.Name, tag.ID))
 
-	builder.WriteString(renderSeparator(40))
+	builder.WriteString(renderSeparator(StandardWidth))
 	builder.WriteString("\n")
 
 	return builder.String()
@@ -106,12 +106,12 @@ func RenderTagAdded(tag domain.Tag) string {
 func RenderTagDeleted(tagID int, tagName string) string {
 	var builder strings.Builder
 
-	builder.WriteString(renderSeparator(40))
+	builder.WriteString(renderSeparator(StandardWidth))
 	builder.WriteString("\n")
 
 	builder.WriteString(fmt.Sprintf("  Tag deleted: %s (ID: %d)\n", tagName, tagID))
 
-	builder.WriteString(renderSeparator(40))
+	builder.WriteString(renderSeparator(StandardWidth))
 	builder.WriteString("\n")
 
 	return builder.String()

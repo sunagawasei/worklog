@@ -21,7 +21,7 @@ const (
 		"    {{ .SeparatorText }}" +
 		"{{ else }}" +
 		"  " + Arrow + " {{ truncateProject .Project .TagName }}" +
-		"{{ if .TagName }}  {{ faint .TagName }}{{ end }}" +
+		"{{ if .TagName }}  {{ .TagName }}{{ end }}" +
 		"  {{ .Time }}  {{ .Status }}" +
 		"{{ if .DateLabel }}  {{ .DateLabel }}{{ end }}" +
 		"{{ end }}"
@@ -30,7 +30,7 @@ const (
 		"    {{ .SeparatorText }}" +
 		"{{ else }}" +
 		"    {{ truncateProject .Project .TagName }}" +
-		"{{ if .TagName }}  {{ faint .TagName }}{{ end }}" +
+		"{{ if .TagName }}  {{ .TagName }}{{ end }}" +
 		"  {{ .Time }}  {{ .Status }}" +
 		"{{ if .DateLabel }}  {{ .DateLabel }}{{ end }}" +
 		"{{ end }}"
@@ -39,7 +39,7 @@ const (
 		"{{ .SeparatorText }}" +
 		"{{ else }}" +
 		"{{ truncateProject .Project .TagName }}" +
-		"{{ if .TagName }}  {{ faint .TagName }}{{ end }}" +
+		"{{ if .TagName }}  {{ .TagName }}{{ end }}" +
 		"  {{ .Time }}  {{ .Status }}" +
 		"{{ if .DateLabel }}  {{ .DateLabel }}{{ end }}" +
 		"{{ end }}"
@@ -70,12 +70,6 @@ type PromptUI interface {
 // formatTagID はタグIDを2桁幅で右揃えフォーマットする
 func formatTagID(id int) string {
 	return fmt.Sprintf("%2d", id)
-}
-
-// faint はpromptuiの内部テンプレートで使用される可能性のある関数
-// 色なしでそのまま返す
-func faint(s string) string {
-	return s
 }
 
 // truncateProjectName はプロジェクト名をターミナル幅に合わせて切り詰める
@@ -123,7 +117,6 @@ func (p *promptUIImpl) SelectTag(tags []domain.Tag) (string, error) {
 
 	funcMap := template.FuncMap{
 		"padID": formatTagID,
-		"faint": faint,
 	}
 
 	templates := &promptui.SelectTemplates{
@@ -136,7 +129,7 @@ func (p *promptUIImpl) SelectTag(tags []domain.Tag) (string, error) {
 	}
 
 	// ヘッダーとヒントを含むラベル
-	label := fmt.Sprintf("タグを選択\n%s", renderSeparator(38))
+	label := fmt.Sprintf("タグを選択\n%s", renderSeparator(StandardWidth - 6))
 
 	prompt := promptui.Select{
 		Label:     label,
@@ -206,7 +199,6 @@ func (p *promptUIImpl) SelectProjectFromList(projects []ProjectDisplay) (*Projec
 
 	// プロジェクトの表示用リストを作成
 	funcMap := template.FuncMap{
-		"faint":           faint,
 		"truncateProject": truncateProjectWithTag,
 	}
 
@@ -220,7 +212,7 @@ func (p *promptUIImpl) SelectProjectFromList(projects []ProjectDisplay) (*Projec
 	}
 
 	// ヘッダーとヒントを含むラベル
-	label := fmt.Sprintf("プロジェクトを選択\n%s", renderSeparator(38))
+	label := fmt.Sprintf("プロジェクトを選択\n%s", renderSeparator(StandardWidth - 6))
 
 	prompt := promptui.Select{
 		Label:     label,
