@@ -40,6 +40,7 @@ func RenderList(summaries []domain.ProjectSummary, now time.Time) string {
 		builder.WriteString("\n")
 		builder.WriteString(fmt.Sprintf("      %s\n", LineV))
 		builder.WriteString(fmt.Sprintf("      %s 本日の作業履歴はありません\n", LineV))
+		builder.WriteString(fmt.Sprintf("      %s 'worklog new' で作業を開始できます\n", LineV))
 		builder.WriteString(fmt.Sprintf("      %s\n", LineV))
 		builder.WriteString(renderSeparator(6))
 		builder.WriteString(CrossB)

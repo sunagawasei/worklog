@@ -70,6 +70,7 @@ func RenderTagList(tags []domain.Tag) string {
 
 	if len(tags) == 0 {
 		builder.WriteString("  (タグがありません)\n")
+		builder.WriteString("  'worklog tag add <名前>' でタグを追加できます\n")
 	} else {
 		for _, tag := range tags {
 			builder.WriteString(fmt.Sprintf("  %2d - %s\n", tag.ID, tag.Name))

@@ -110,7 +110,7 @@ func handleSwitch(manager project.ProjectManager) error {
 		newTagName = selected.TagName
 
 		// 対話モードで時刻を入力
-		timeStr, err := promptUI.InputTime("Switch time")
+		timeStr, err := promptUI.InputTime("切替時刻")
 		if err != nil {
 			return fmt.Errorf("時刻の入力に失敗: %w", err)
 		}

@@ -37,7 +37,7 @@ func handleStop(manager project.ProjectManager) error {
 	} else {
 		// 引数なしの場合は対話モードで時刻入力
 		promptUI := ui.NewPromptUI()
-		timeStr, err := promptUI.InputTime("Stop time")
+		timeStr, err := promptUI.InputTime("停止時刻")
 		if err != nil {
 			return fmt.Errorf("時刻の入力に失敗: %w", err)
 		}

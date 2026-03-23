@@ -31,10 +31,12 @@ func RenderDashboard(status *domain.ProjectStatus, summaries []domain.ProjectSum
 	// Status部分の内容を準備（Phase 2 #5: 配置ロジック簡素化）
 	var statusLines []string
 	if status == nil {
-		// アイドル状態
+		// アイドル状態（上下に空行を追加して呼吸感を確保）
 		statusLines = []string{
+			"",
 			"稼働中のプロジェクトは",
 			"ありません",
+			"",
 		}
 	} else {
 		// 稼働中：現在セッション時間 / 累計時間
