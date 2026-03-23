@@ -1,48 +1,18 @@
 // Package ui はワークログアプリケーションの対話的UIコンポーネントを担当する
-// promptuiライブラリを使用してターミナルインタラクションを強化
+// charmbracelet/huh ライブラリを使用してターミナルインタラクションを提供
 package ui
 
 import (
 	"errors"
 	"fmt"
 	"strconv"
-	"text/template"
+	"strings"
 	"time"
 
 	"worklog/internal/domain"
 
-	"github.com/manifoldco/promptui"
+	"github.com/charmbracelet/huh"
 	"github.com/mattn/go-runewidth"
-)
-
-// promptui テンプレート（Phase 4 #11: 可読性のため定数として定義）
-const (
-	selectProjectActiveTemplate = "{{ if .IsSeparator }}" +
-		"    {{ .SeparatorText }}" +
-		"{{ else }}" +
-		"  " + Arrow + " {{ truncateProject .Project .TagName }}" +
-		"{{ if .TagName }}  {{ .TagName }}{{ end }}" +
-		"  {{ .Time }}  {{ .Status }}" +
-		"{{ if .DateLabel }}  {{ .DateLabel }}{{ end }}" +
-		"{{ end }}"
-
-	selectProjectInactiveTemplate = "{{ if .IsSeparator }}" +
-		"    {{ .SeparatorText }}" +
-		"{{ else }}" +
-		"    {{ truncateProject .Project .TagName }}" +
-		"{{ if .TagName }}  {{ .TagName }}{{ end }}" +
-		"  {{ .Time }}  {{ .Status }}" +
-		"{{ if .DateLabel }}  {{ .DateLabel }}{{ end }}" +
-		"{{ end }}"
-
-	selectProjectSelectedTemplate = "{{ if .IsSeparator }}" +
-		"{{ .SeparatorText }}" +
-		"{{ else }}" +
-		"{{ truncateProject .Project .TagName }}" +
-		"{{ if .TagName }}  {{ .TagName }}{{ end }}" +
-		"  {{ .Time }}  {{ .Status }}" +
-		"{{ if .DateLabel }}  {{ .DateLabel }}{{ end }}" +
-		"{{ end }}"
 )
 
 // ProjectDisplay は選択リストで表示するプロジェクト情報
@@ -64,7 +34,7 @@ type PromptUI interface {
 	InputProject() (string, error)
 	ConfirmAction(action string) (bool, error)
 	SelectProjectFromList(projects []ProjectDisplay) (*ProjectDisplay, error)
-	InputTime(label string) (string, error) // 時刻入力用メソッドを追加
+	InputTime(label string) (string, error)
 }
 
 // formatTagID はタグIDを2桁幅で右揃えフォーマットする
@@ -82,10 +52,7 @@ func truncateProjectName(project string, termWidth int, tagWidth int) string {
 		fixedWidth += tagWidth + 2 // タグ名 + "  " セパレーター
 	}
 
-	maxProjectWidth := termWidth - fixedWidth
-	if maxProjectWidth < 12 {
-		maxProjectWidth = 12 // 最低でも12文字は表示（省略記号を含む）
-	}
+	maxProjectWidth := max(termWidth-fixedWidth, 12) // 最低でも12文字は表示（省略記号を含む）
 
 	currentWidth := runewidth.StringWidth(project)
 	if currentWidth <= maxProjectWidth {
@@ -95,10 +62,65 @@ func truncateProjectName(project string, termWidth int, tagWidth int) string {
 	return runewidth.Truncate(project, maxProjectWidth, "…")
 }
 
-// truncateProjectWithTag はテンプレート関数としてタグ名を考慮してプロジェクト名を切り詰める
+// truncateProjectWithTag はタグ名を考慮してプロジェクト名を切り詰める
 func truncateProjectWithTag(project, tagName string) string {
 	tagWidth := runewidth.StringWidth(tagName)
 	return truncateProjectName(project, GetTerminalWidth(), tagWidth)
+}
+
+// buildProjectLabel はProjectDisplayからhuh選択リスト用の表示文字列を生成する
+func buildProjectLabel(pd ProjectDisplay) string {
+	var sb strings.Builder
+	name := truncateProjectWithTag(pd.Project, pd.TagName)
+	sb.WriteString(name)
+	if pd.TagName != "" {
+		sb.WriteString("  ")
+		sb.WriteString(pd.TagName)
+	}
+	sb.WriteString("  ")
+	sb.WriteString(pd.Time)
+	sb.WriteString("  ")
+	sb.WriteString(pd.Status)
+	if pd.DateLabel != "" {
+		sb.WriteString("  ")
+		sb.WriteString(pd.DateLabel)
+	}
+	return sb.String()
+}
+
+// validateTimeInput は時刻入力のバリデーション関数
+func validateTimeInput(input string) error {
+	// 空欄は許可（現在時刻を使用）
+	if input == "" {
+		return nil
+	}
+
+	// HHMM形式（4桁の数字）かチェック
+	if len(input) == 4 {
+		for _, ch := range input {
+			if ch < '0' || ch > '9' {
+				return errors.New("時刻は HH:MM または HHMM 形式で入力してください")
+			}
+		}
+		return nil
+	}
+
+	// HH:MM形式の簡易チェック
+	if len(input) < 3 || len(input) > 5 {
+		return errors.New("時刻は HH:MM または HHMM 形式で入力してください")
+	}
+
+	colonCount := 0
+	for _, ch := range input {
+		if ch == ':' {
+			colonCount++
+		}
+	}
+	if colonCount != 1 {
+		return errors.New("時刻は HH:MM または HHMM 形式で入力してください")
+	}
+
+	return nil
 }
 
 // promptUIImpl はPromptUIインターフェースの実装
@@ -115,56 +137,43 @@ func (p *promptUIImpl) SelectTag(tags []domain.Tag) (string, error) {
 		return "", errors.New("利用可能なタグがありません")
 	}
 
-	funcMap := template.FuncMap{
-		"padID": formatTagID,
+	options := make([]huh.Option[string], len(tags))
+	for i, tag := range tags {
+		label := fmt.Sprintf("%s - %s", formatTagID(tag.ID), tag.Name)
+		options[i] = huh.NewOption(label, strconv.Itoa(tag.ID))
 	}
 
-	templates := &promptui.SelectTemplates{
-		Label:    "{{ . }}",
-		Active:   "  " + Arrow + " {{ padID .ID }} - {{ .Name }}",
-		Inactive: "    {{ padID .ID }} - {{ .Name }}",
-		Selected: "{{ padID .ID }} - {{ .Name }}",
-		Details:  "", // Detailsを空文字列に設定してデフォルトを無効化
-		FuncMap:  funcMap,
-	}
-
-	// ヘッダーとヒントを含むラベル
-	label := fmt.Sprintf("タグを選択\n%s", renderSeparator(StandardWidth - 6))
-
-	prompt := promptui.Select{
-		Label:     label,
-		Items:     tags,
-		Templates: templates,
-		Size:      10,
-		// promptuiは自動的に "Use the arrow keys to navigate: ↓ ↑ → ←" を表示
-	}
-
-	i, _, err := prompt.Run()
+	var selected string
+	err := huh.NewSelect[string]().
+		Title("タグを選択").
+		Options(options...).
+		Value(&selected).
+		WithTheme(huh.ThemeBase()).
+		Run()
 	if err != nil {
 		return "", err
 	}
 
-	return strconv.Itoa(tags[i].ID), nil
+	return selected, nil
 }
 
 // InputProject はプロジェクト名を入力する
 func (p *promptUIImpl) InputProject() (string, error) {
-	validate := func(input string) error {
-		if input == "" {
-			return errors.New("プロジェクト名を入力してください")
-		}
-		if len(input) > 300 {
-			return errors.New("プロジェクト名は300文字以内で入力してください")
-		}
-		return nil
-	}
-
-	prompt := promptui.Prompt{
-		Label:    "プロジェクト名",
-		Validate: validate,
-	}
-
-	result, err := prompt.Run()
+	var result string
+	err := huh.NewInput().
+		Title("プロジェクト名").
+		Value(&result).
+		Validate(func(s string) error {
+			if s == "" {
+				return errors.New("プロジェクト名を入力してください")
+			}
+			if len(s) > 300 {
+				return errors.New("プロジェクト名は300文字以内で入力してください")
+			}
+			return nil
+		}).
+		WithTheme(huh.ThemeBase()).
+		Run()
 	if err != nil {
 		return "", err
 	}
@@ -174,122 +183,74 @@ func (p *promptUIImpl) InputProject() (string, error) {
 
 // ConfirmAction はアクションの確認を行う
 func (p *promptUIImpl) ConfirmAction(action string) (bool, error) {
-	prompt := promptui.Prompt{
-		Label:     fmt.Sprintf("%s しますか？", action),
-		IsConfirm: true,
-	}
-
-	result, err := prompt.Run()
+	var confirmed bool
+	err := huh.NewConfirm().
+		Title(fmt.Sprintf("%s しますか？", action)).
+		Value(&confirmed).
+		WithTheme(huh.ThemeBase()).
+		Run()
 	if err != nil {
-		// プロンプトがキャンセルされた場合
-		if err == promptui.ErrAbort {
+		// Escape/Ctrl+C をキャンセル（false）として扱う
+		if errors.Is(err, huh.ErrUserAborted) {
 			return false, nil
 		}
 		return false, err
 	}
 
-	return result == "y" || result == "Y", nil
+	return confirmed, nil
 }
 
 // SelectProjectFromList はプロジェクトリストから選択する
+// セパレーター項目はオプションリストから除外し、DateLabelで日付グループを識別する
 func (p *promptUIImpl) SelectProjectFromList(projects []ProjectDisplay) (*ProjectDisplay, error) {
 	if len(projects) == 0 {
 		return nil, errors.New("利用可能なプロジェクトがありません")
 	}
 
-	// プロジェクトの表示用リストを作成
-	funcMap := template.FuncMap{
-		"truncateProject": truncateProjectWithTag,
+	// セパレーターを除いたオプションリストを構築（値は元スライスのインデックス）
+	var options []huh.Option[int]
+	firstIdx := -1
+	for i, pd := range projects {
+		if pd.IsSeparator {
+			continue
+		}
+		if firstIdx == -1 {
+			firstIdx = i
+		}
+		options = append(options, huh.NewOption(buildProjectLabel(pd), i))
 	}
 
-	templates := &promptui.SelectTemplates{
-		Label:    "{{ . }}",
-		Active:   selectProjectActiveTemplate,
-		Inactive: selectProjectInactiveTemplate,
-		Selected: selectProjectSelectedTemplate,
-		Details:  "", // Detailsを空文字列に設定してデフォルトを無効化
-		FuncMap:  funcMap,
+	if len(options) == 0 {
+		return nil, errors.New("利用可能なプロジェクトがありません")
 	}
 
-	// ヘッダーとヒントを含むラベル
-	label := fmt.Sprintf("プロジェクトを選択\n%s", renderSeparator(StandardWidth - 6))
-
-	prompt := promptui.Select{
-		Label:     label,
-		Items:     projects,
-		Templates: templates,
-		Size:      10,
-	}
-
-	i, _, err := prompt.Run()
+	selectedIdx := firstIdx
+	err := huh.NewSelect[int]().
+		Title("プロジェクトを選択").
+		Options(options...).
+		Value(&selectedIdx).
+		WithTheme(huh.ThemeBase()).
+		Run()
 	if err != nil {
 		return nil, err
 	}
 
-	// セパレーターが選択された場合は再選択（再帰呼び出しを避けてforループを使用）
-	for projects[i].IsSeparator {
-		i, _, err = prompt.Run()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &projects[i], nil
+	return &projects[selectedIdx], nil
 }
 
 // InputTime は時刻を入力させる（空欄で現在時刻）
 func (p *promptUIImpl) InputTime(label string) (string, error) {
-	// 時刻入力のバリデーション関数
-	validate := func(input string) error {
-		// 空欄は許可（現在時刻を使用）
-		if input == "" {
-			return nil
-		}
-
-		// HHMM形式（4桁の数字）かチェック
-		if len(input) == 4 {
-			// 全て数字かチェック
-			for _, ch := range input {
-				if ch < '0' || ch > '9' {
-					return errors.New("時刻は HH:MM または HHMM 形式で入力してください")
-				}
-			}
-			// 4桁の数字の場合は有効
-			return nil
-		}
-
-		// HH:MM形式の簡易チェック
-		// parseTimeArgで詳細な検証を行うので、ここでは簡易チェックのみ
-		if len(input) < 3 || len(input) > 5 {
-			return errors.New("時刻は HH:MM または HHMM 形式で入力してください")
-		}
-
-		// コロンが含まれているかチェック
-		colonCount := 0
-		for _, ch := range input {
-			if ch == ':' {
-				colonCount++
-			}
-		}
-		if colonCount != 1 {
-			return errors.New("時刻は HH:MM または HHMM 形式で入力してください")
-		}
-
-		return nil
-	}
-
 	now := time.Now().Format("15:04")
-	prompt := promptui.Prompt{
-		Label:    fmt.Sprintf("%s (HH:MM, 空欄で現在時刻 = %s)", label, now),
-		Validate: validate,
-		Default:  "", // デフォルトは空欄（現在時刻）
-	}
-
-	result, err := prompt.Run()
+	var result string
+	err := huh.NewInput().
+		Title(fmt.Sprintf("%s (HH:MM, 空欄で現在時刻 = %s)", label, now)).
+		Value(&result).
+		Validate(validateTimeInput).
+		WithTheme(huh.ThemeBase()).
+		Run()
 	if err != nil {
 		return "", err
 	}
 
 	return result, nil
 }
-
