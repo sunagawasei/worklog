@@ -67,9 +67,9 @@ func TestRenderTagAdded(t *testing.T) {
 			t.Error("'Tag added' メッセージが含まれていない")
 		}
 
-		// 区切り線を含むことを確認
-		if !strings.Contains(result, string(LineH)) {
-			t.Error("区切り線が含まれていない")
+		// 丸角ボックスを含むことを確認
+		if !strings.Contains(result, RoundTL) {
+			t.Errorf("丸角ボックス %q が含まれていない", RoundTL)
 		}
 	})
 }
@@ -90,9 +90,9 @@ func TestRenderTagDeleted(t *testing.T) {
 			t.Error("'Tag deleted' メッセージが含まれていない")
 		}
 
-		// 区切り線を含むことを確認
-		if !strings.Contains(result, string(LineH)) {
-			t.Error("区切り線が含まれていない")
+		// 丸角ボックスを含むことを確認
+		if !strings.Contains(result, RoundTL) {
+			t.Errorf("丸角ボックス %q が含まれていない", RoundTL)
 		}
 	})
 }

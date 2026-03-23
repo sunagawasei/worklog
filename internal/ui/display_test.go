@@ -542,9 +542,12 @@ func TestRenderError(t *testing.T) {
 		t.Errorf("期待: 'worklog help'を含む, 実際: %q", result)
 	}
 
-	// 区切り線が含まれているか
-	if !strings.Contains(result, "─") {
-		t.Errorf("期待: 区切り線'─'を含む, 実際: %q", result)
+	// 丸角ボックス文字が含まれているか
+	if !strings.Contains(result, RoundTL) {
+		t.Errorf("期待: 丸角ボックス %q を含む, 実際: %q", RoundTL, result)
+	}
+	if !strings.Contains(result, RoundBR) {
+		t.Errorf("期待: 丸角ボックス %q を含む, 実際: %q", RoundBR, result)
 	}
 }
 

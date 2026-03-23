@@ -50,19 +50,14 @@ func RenderHelp() string {
 	return builder.String()
 }
 
-// RenderError はエラーメッセージを整形して表示する
+// RenderError はエラーメッセージを丸角ボックスで整形して表示する
 func RenderError(message string) string {
-	var builder strings.Builder
-
-	builder.WriteString(renderSeparator(StandardWidth))
-	builder.WriteString("\n")
-	builder.WriteString(fmt.Sprintf("  [!] %s\n", message))
-	builder.WriteString("  \n")
-	builder.WriteString("  Try 'worklog help' for available commands\n")
-	builder.WriteString(renderSeparator(StandardWidth))
-	builder.WriteString("\n")
-
-	return builder.String()
+	lines := []string{
+		fmt.Sprintf("[!] %s", message),
+		"",
+		"'worklog help' で利用可能なコマンドを確認できます",
+	}
+	return renderRoundBox(lines, StandardWidth)
 }
 
 // RenderTagList はタグ一覧を整形して表示する
@@ -87,32 +82,14 @@ func RenderTagList(tags []domain.Tag) string {
 	return builder.String()
 }
 
-// RenderTagAdded はタグ追加完了メッセージを整形して表示する
+// RenderTagAdded はタグ追加完了メッセージを丸角ボックスで整形して表示する
 func RenderTagAdded(tag domain.Tag) string {
-	var builder strings.Builder
-
-	builder.WriteString(renderSeparator(StandardWidth))
-	builder.WriteString("\n")
-
-	builder.WriteString(fmt.Sprintf("  Tag added: %s (ID: %d)\n", tag.Name, tag.ID))
-
-	builder.WriteString(renderSeparator(StandardWidth))
-	builder.WriteString("\n")
-
-	return builder.String()
+	lines := []string{fmt.Sprintf("Tag added: %s (ID: %d)", tag.Name, tag.ID)}
+	return renderRoundBox(lines, StandardWidth)
 }
 
-// RenderTagDeleted はタグ削除完了メッセージを整形して表示する
+// RenderTagDeleted はタグ削除完了メッセージを丸角ボックスで整形して表示する
 func RenderTagDeleted(tagID int, tagName string) string {
-	var builder strings.Builder
-
-	builder.WriteString(renderSeparator(StandardWidth))
-	builder.WriteString("\n")
-
-	builder.WriteString(fmt.Sprintf("  Tag deleted: %s (ID: %d)\n", tagName, tagID))
-
-	builder.WriteString(renderSeparator(StandardWidth))
-	builder.WriteString("\n")
-
-	return builder.String()
+	lines := []string{fmt.Sprintf("Tag deleted: %s (ID: %d)", tagName, tagID)}
+	return renderRoundBox(lines, StandardWidth)
 }

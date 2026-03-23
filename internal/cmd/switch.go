@@ -30,8 +30,7 @@ func handleSwitch(manager project.ProjectManager) error {
 		}
 
 		if len(summaries) == 0 {
-			fmt.Println("過去2週間に作業したプロジェクトがありません")
-			fmt.Println("新規プロジェクトを開始してください")
+			fmt.Fprint(os.Stderr, ui.RenderError("過去2週間に作業したプロジェクトがありません"))
 			return nil
 		}
 
@@ -96,7 +95,7 @@ func handleSwitch(manager project.ProjectManager) error {
 		selectableProjects = append(selectableProjects, pastProjects...)
 
 		if len(selectableProjects) == 0 {
-			fmt.Println("切り替え可能なプロジェクトがありません")
+			fmt.Fprint(os.Stderr, ui.RenderError("切り替え可能なプロジェクトがありません"))
 			return nil
 		}
 
