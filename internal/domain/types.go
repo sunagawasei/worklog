@@ -3,6 +3,13 @@ package domain
 
 import "time"
 
+// LogEntry はログの1エントリを表す
+type LogEntry struct {
+	Timestamp time.Time
+	Action    string
+	Tag       string
+}
+
 // Tag はプロジェクトのタグを表す
 type Tag struct {
 	ID   int    `json:"id"`

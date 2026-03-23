@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"worklog/internal/domain"
 )
 
 const logFileExtension = ".log"
@@ -20,12 +22,8 @@ type LogStorage interface {
 	ReadRange(startDate, endDate time.Time) (map[string][]LogEntry, error)
 }
 
-// LogEntry はログの1エントリを表す構造体
-type LogEntry struct {
-	Timestamp time.Time
-	Action    string
-	Tag       string
-}
+// LogEntry は domain.LogEntry のエイリアス
+type LogEntry = domain.LogEntry
 
 // logStorage はLogStorageインターフェースの実装
 type logStorage struct {

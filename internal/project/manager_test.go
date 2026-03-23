@@ -158,10 +158,10 @@ func TestProjectManager_New(t *testing.T) {
 	// ProjectManagerの作成
 	manager := NewProjectManager(currentStorage, logStorage, tagStorage)
 
-	// Newメソッドのテスト
-	err := manager.New("ProjectA", "Development")
+	// NewAtメソッドのテスト
+	err := manager.NewAt("ProjectA", "Development", time.Now())
 	if err != nil {
-		t.Errorf("New()でエラーが発生: %v", err)
+		t.Errorf("NewAt()でエラーが発生: %v", err)
 	}
 
 	// CurrentStorageへの書き込みを確認
@@ -201,10 +201,10 @@ func TestProjectManager_New_WithAutoStop(t *testing.T) {
 		// ProjectManagerの作成
 		manager := NewProjectManager(currentStorage, logStorage, tagStorage)
 
-		// Newメソッドのテスト（自動停止を期待）
-		err := manager.New("ProjectA", "Development")
+		// NewAtメソッドのテスト（自動停止を期待）
+		err := manager.NewAt("ProjectA", "Development", time.Now())
 		if err != nil {
-			t.Errorf("New()でエラーが発生しました: %v", err)
+			t.Errorf("NewAt()でエラーが発生しました: %v", err)
 			return
 		}
 
@@ -258,10 +258,10 @@ func TestProjectManager_Switch(t *testing.T) {
 	// ProjectManagerの作成
 	manager := NewProjectManager(currentStorage, logStorage, tagStorage)
 
-	// Switchメソッドのテスト
-	err := manager.Switch("ProjectB", "MTG")
+	// SwitchAtメソッドのテスト
+	err := manager.SwitchAt("ProjectB", "MTG", time.Now())
 	if err != nil {
-		t.Errorf("Switch()でエラーが発生: %v", err)
+		t.Errorf("SwitchAt()でエラーが発生: %v", err)
 	}
 
 	// LogStorageへの記録を確認（stop→startの2つ）
@@ -313,10 +313,10 @@ func TestProjectManager_Stop(t *testing.T) {
 	// ProjectManagerの作成
 	manager := NewProjectManager(currentStorage, logStorage, tagStorage)
 
-	// Stopメソッドのテスト
-	err := manager.Stop()
+	// StopAtメソッドのテスト
+	err := manager.StopAt(time.Now())
 	if err != nil {
-		t.Errorf("Stop()でエラーが発生: %v", err)
+		t.Errorf("StopAt()でエラーが発生: %v", err)
 	}
 
 	// LogStorageへの記録を確認（stopの1つ）

@@ -20,21 +20,16 @@ const (
 
 // ProjectManager はプロジェクト管理のビジネスロジックを扱うインターフェース
 type ProjectManager interface {
-	New(project, tag string) error                              // 新規プロジェクト開始
-	Switch(project, tag string) error                           // プロジェクト切り替え
-	Stop() error                                                // 停止
-	Status() (*domain.ProjectStatus, error)                     // 現在の状況
-	List() ([]domain.ProjectSummary, error)                     // 本日の一覧
-	ListOnDate(date time.Time) ([]domain.ProjectSummary, error) // 指定日の一覧
-	ListRecent(days int) ([]domain.ProjectSummary, error)       // 過去N日間の一覧
-	GetTags() ([]domain.Tag, error)                             // タグ一覧を取得
-	AddTag(name string) (domain.Tag, error)                     // タグを追加
-	DeleteTag(id int) error                                     // タグを削除
-
-	// 時刻指定版メソッド
 	NewAt(project, tag string, timestamp time.Time) error    // 指定時刻で新規プロジェクト開始
 	SwitchAt(project, tag string, timestamp time.Time) error // 指定時刻でプロジェクト切り替え
 	StopAt(timestamp time.Time) error                        // 指定時刻で停止
+	Status() (*domain.ProjectStatus, error)                  // 現在の状況
+	List() ([]domain.ProjectSummary, error)                  // 本日の一覧
+	ListOnDate(date time.Time) ([]domain.ProjectSummary, error) // 指定日の一覧
+	ListRecent(days int) ([]domain.ProjectSummary, error)    // 過去N日間の一覧
+	GetTags() ([]domain.Tag, error)                          // タグ一覧を取得
+	AddTag(name string) (domain.Tag, error)                  // タグを追加
+	DeleteTag(id int) error                                   // タグを削除
 }
 
 // projectManager はProjectManagerインターフェースの実装
@@ -55,21 +50,6 @@ func NewProjectManager(
 		logStorage:     log,
 		tagStorage:     tag,
 	}
-}
-
-// New は新規プロジェクトを開始する
-func (m *projectManager) New(project, tag string) error {
-	return m.NewAt(project, tag, time.Now())
-}
-
-// Switch はプロジェクトを切り替える
-func (m *projectManager) Switch(project, tag string) error {
-	return m.SwitchAt(project, tag, time.Now())
-}
-
-// Stop は現在のプロジェクトを停止する
-func (m *projectManager) Stop() error {
-	return m.StopAt(time.Now())
 }
 
 // getTagName はタグIDからタグ名を取得するヘルパーメソッド
@@ -93,79 +73,80 @@ func (m *projectManager) getTagName(tagID string) string {
 	return ""
 }
 
+// parseCurrent はcurrent文字列をプロジェクト名とタグIDに分割する
+// format: "ProjectName\tTagID"
+func parseCurrent(current string) (project, tag string, err error) {
+	idx := strings.IndexRune(current, '\t')
+	if idx == -1 {
+		return "", "", errors.New("current情報の形式が不正です")
+	}
+	return current[:idx], current[idx+1:], nil
+}
+
+// calculateSessions はログエントリから完了セッションの合計時間・時間範囲と、
+// 未完了セッションの開始時刻（openStart）を返す。
+// openStart が非nilの場合、対応するstopなしのstartが存在する（現在稼働中）。
+func calculateSessions(entries []domain.LogEntry) (total time.Duration, ranges []domain.TimeRange, openStart *time.Time) {
+	for _, entry := range entries {
+		switch entry.Action {
+		case actionStart:
+			t := entry.Timestamp
+			openStart = &t
+		case actionStop:
+			if openStart != nil {
+				d := entry.Timestamp.Sub(*openStart)
+				total += d
+				ranges = append(ranges, domain.TimeRange{
+					Start:    *openStart,
+					End:      entry.Timestamp,
+					Duration: d,
+				})
+				openStart = nil
+			}
+		}
+	}
+	return
+}
+
 // Status は現在の稼働状況を返す（簡潔な名前）
 func (m *projectManager) Status() (*domain.ProjectStatus, error) {
-	// 既存のプロジェクト情報を取得
 	current, err := m.currentStorage.Read()
 	if err != nil {
 		// 稼働中のプロジェクトがない場合はnilを返す（エラーではない）
 		return nil, nil
 	}
 
-	// current文字列を解析（format: "ProjectName\tTagID"）
-	var project, tag string
-	if idx := strings.IndexRune(current, '\t'); idx != -1 {
-		project = current[:idx]
-		tag = current[idx+1:]
-	} else {
-		return nil, errors.New("current情報の形式が不正です")
+	project, tag, err := parseCurrent(current)
+	if err != nil {
+		return nil, err
 	}
 
-	// タグ名を取得
 	tagName := m.getTagName(tag)
 
-	// ログから開始時刻と累計時間を取得
 	startTime := time.Now()
 	totalTime := time.Duration(0)
 	currentSessionTime := time.Duration(0)
 
 	logs, err := m.logStorage.ReadToday(project)
 	if err == nil {
-		// 最新のstartアクションを探す
-		for i := len(logs) - 1; i >= 0; i-- {
-			if logs[i].Action == actionStart {
-				startTime = logs[i].Timestamp
-				break
-			}
-		}
-
-		// 累計時間を計算（List()と同じロジック）
-		var sessionStart *time.Time
-		for _, entry := range logs {
-			switch entry.Action {
-			case actionStart:
-				t := entry.Timestamp
-				sessionStart = &t
-			case actionStop:
-				if sessionStart != nil {
-					duration := entry.Timestamp.Sub(*sessionStart)
-					totalTime += duration
-					sessionStart = nil
-				}
-			}
-		}
-
-		// 現在稼働中の場合、現在時刻までの時間を加算
-		if sessionStart != nil {
+		total, _, openStart := calculateSessions(logs)
+		totalTime = total
+		if openStart != nil {
 			now := time.Now()
-			duration := now.Sub(*sessionStart)
-			totalTime += duration
-			// 現在セッションの経過時間を計算
+			startTime = *openStart
+			totalTime += now.Sub(*openStart)
 			currentSessionTime = now.Sub(startTime)
 		}
 	}
 
-	// ProjectStatusを作成して返す
-	status := &domain.ProjectStatus{
+	return &domain.ProjectStatus{
 		Project:            project,
 		Tag:                tag,
 		TagName:            tagName,
 		StartTime:          startTime,
 		CurrentSessionTime: currentSessionTime,
 		TotalTime:          totalTime,
-	}
-
-	return status, nil
+	}, nil
 }
 
 // List は本日のプロジェクト一覧を返す（簡潔な名前）
@@ -181,14 +162,13 @@ func (m *projectManager) List() ([]domain.ProjectSummary, error) {
 	currentTag := ""
 	current, err := m.currentStorage.Read()
 	if err == nil && current != "" {
-		// current文字列を解析
-		if idx := strings.IndexRune(current, '\t'); idx != -1 {
-			currentProject = current[:idx]
-			currentTag = current[idx+1:]
+		if p, t, parseErr := parseCurrent(current); parseErr == nil {
+			currentProject = p
+			currentTag = t
 
 			// 現在稼働中のプロジェクトのログがない場合、空のエントリを追加
 			if _, exists := allLogs[currentProject]; !exists {
-				allLogs[currentProject] = []storage.LogEntry{}
+				allLogs[currentProject] = []domain.LogEntry{}
 			}
 		}
 	}
@@ -214,50 +194,22 @@ func (m *projectManager) List() ([]domain.ProjectSummary, error) {
 		summary.TagName = m.getTagName(summary.Tag)
 
 		// 稼働時間と時間範囲を計算
-		totalDuration := time.Duration(0)
-		var startTime *time.Time
-		var timeRanges []domain.TimeRange
-
-		for _, entry := range entries {
-			switch entry.Action {
-			case actionStart:
-				// 開始時刻を記録
-				t := entry.Timestamp
-				startTime = &t
-			case actionStop:
-				// 開始時刻がある場合、期間を計算し時間範囲を追加
-				if startTime != nil {
-					duration := entry.Timestamp.Sub(*startTime)
-					totalDuration += duration
-
-					// 時間範囲を追加
-					timeRanges = append(timeRanges, domain.TimeRange{
-						Start:    *startTime,
-						End:      entry.Timestamp,
-						Duration: duration,
-					})
-
-					startTime = nil
-				}
-			}
-		}
+		total, ranges, openStart := calculateSessions(entries)
 
 		// 現在稼働中の場合、現在時刻までの時間を追加
-		if project == currentProject && startTime != nil {
+		if project == currentProject && openStart != nil {
 			now := time.Now()
-			duration := now.Sub(*startTime)
-			totalDuration += duration
-
-			// 稼働中の時間範囲を追加
-			timeRanges = append(timeRanges, domain.TimeRange{
-				Start:    *startTime,
+			d := now.Sub(*openStart)
+			total += d
+			ranges = append(ranges, domain.TimeRange{
+				Start:    *openStart,
 				End:      now,
-				Duration: duration,
+				Duration: d,
 			})
 		}
 
-		summary.TotalTime = totalDuration
-		summary.TimeRanges = timeRanges
+		summary.TotalTime = total
+		summary.TimeRanges = ranges
 		summaries = append(summaries, summary)
 	}
 
@@ -304,39 +256,10 @@ func (m *projectManager) ListOnDate(date time.Time) ([]domain.ProjectSummary, er
 		// タグ名を取得
 		summary.TagName = m.getTagName(summary.Tag)
 
-		// 稼働時間と時間範囲を計算
-		totalDuration := time.Duration(0)
-		var startTime *time.Time
-		var timeRanges []domain.TimeRange
-
-		for _, entry := range entries {
-			switch entry.Action {
-			case actionStart:
-				// 開始時刻を記録
-				t := entry.Timestamp
-				startTime = &t
-			case actionStop:
-				// 開始時刻がある場合、期間を計算し時間範囲を追加
-				if startTime != nil {
-					duration := entry.Timestamp.Sub(*startTime)
-					totalDuration += duration
-
-					// 時間範囲を追加
-					timeRanges = append(timeRanges, domain.TimeRange{
-						Start:    *startTime,
-						End:      entry.Timestamp,
-						Duration: duration,
-					})
-
-					startTime = nil
-				}
-			}
-		}
-
-		// 指定日の場合、未完了のセッションは無視（currentを考慮しない）
-
-		summary.TotalTime = totalDuration
-		summary.TimeRanges = timeRanges
+		// 稼働時間と時間範囲を計算（指定日の未完了セッションは無視）
+		total, ranges, _ := calculateSessions(entries)
+		summary.TotalTime = total
+		summary.TimeRanges = ranges
 		summaries = append(summaries, summary)
 	}
 
@@ -365,13 +288,9 @@ func (m *projectManager) NewAt(project, tag string, timestamp time.Time) error {
 	current, err := m.currentStorage.Read()
 	if err == nil && current != "" {
 		// 稼働中のプロジェクトを自動停止
-		// current文字列を解析（format: "ProjectName\tTagID"）
-		var oldProject, oldTag string
-		if idx := strings.IndexRune(current, '\t'); idx != -1 {
-			oldProject = current[:idx]
-			oldTag = current[idx+1:]
-		} else {
-			return errors.New("current情報の形式が不正です")
+		oldProject, oldTag, err := parseCurrent(current)
+		if err != nil {
+			return err
 		}
 
 		// 既存プロジェクトを停止（指定時刻で）
@@ -404,13 +323,9 @@ func (m *projectManager) SwitchAt(project, tag string, timestamp time.Time) erro
 	current, err := m.currentStorage.Read()
 	if err == nil && current != "" {
 		// 稼働中のプロジェクトがある場合のみ停止処理
-		// current文字列を解析（format: "ProjectName\tTagID"）
-		var oldProject, oldTag string
-		if idx := strings.IndexRune(current, '\t'); idx != -1 {
-			oldProject = current[:idx]
-			oldTag = current[idx+1:]
-		} else {
-			return errors.New("current情報の形式が不正です")
+		oldProject, oldTag, err := parseCurrent(current)
+		if err != nil {
+			return err
 		}
 
 		// 既存プロジェクトを停止（指定時刻で）
@@ -443,13 +358,9 @@ func (m *projectManager) StopAt(timestamp time.Time) error {
 		return errors.New("稼働中のプロジェクトがありません")
 	}
 
-	// current文字列を解析（format: "ProjectName\tTagID"）
-	var project, tag string
-	if idx := strings.IndexRune(current, '\t'); idx != -1 {
-		project = current[:idx]
-		tag = current[idx+1:]
-	} else {
-		return errors.New("current情報の形式が不正です")
+	project, tag, err := parseCurrent(current)
+	if err != nil {
+		return err
 	}
 
 	// プロジェクトを停止（指定時刻で）
@@ -504,31 +415,12 @@ func (m *projectManager) ListRecent(days int) ([]domain.ProjectSummary, error) {
 		}
 
 		// 稼働時間と時間範囲を計算
-		var startTime *time.Time
+		total, ranges, _ := calculateSessions(entries)
+		summary.TotalTime += total
+		summary.TimeRanges = append(summary.TimeRanges, ranges...)
+
+		// 最終アクティビティ時刻を更新
 		for _, entry := range entries {
-			switch entry.Action {
-			case actionStart:
-				// 開始時刻を記録
-				t := entry.Timestamp
-				startTime = &t
-			case actionStop:
-				// 開始時刻がある場合、期間を計算し時間範囲を追加
-				if startTime != nil {
-					duration := entry.Timestamp.Sub(*startTime)
-					summary.TotalTime += duration
-
-					// 時間範囲を追加
-					summary.TimeRanges = append(summary.TimeRanges, domain.TimeRange{
-						Start:    *startTime,
-						End:      entry.Timestamp,
-						Duration: duration,
-					})
-
-					startTime = nil
-				}
-			}
-
-			// 最終アクティビティ時刻を更新
 			if entry.Timestamp.After(summary.LastActivity) {
 				summary.LastActivity = entry.Timestamp
 			}
