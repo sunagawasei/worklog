@@ -49,6 +49,8 @@ const (
 	BlockSquare          = "■" // U+25A0 Black Square
 	BlockCrosshatch      = "▦" // U+25A6 Square with Orthogonal Crosshatch Fill
 	BlockDiagonalPattern = "▨" // U+25A8 Square with Upper Right to Lower Left Fill
+	BlockVerticalLines   = "▥" // U+25A5 Square with Vertical Fill
+	BlockDiagonalR       = "▧" // U+25A7 Square with Upper Left to Lower Right Fill
 	MiddleDot            = "·" // U+00B7 Middle Dot (idle用)
 
 	// 二重線（重要度の高い区切りに使用）

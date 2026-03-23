@@ -16,7 +16,7 @@ const currentTimeMarker = "▼"
 
 // selectBlockChar はプロジェクトインデックスに応じたブロック文字を返す
 func selectBlockChar(projectIndex int) string {
-	chars := []string{BlockSquare, BlockCrosshatch, BlockDiagonalPattern}
+	chars := []string{BlockSquare, BlockCrosshatch, BlockDiagonalPattern, BlockVerticalLines, BlockDiagonalR}
 	return chars[projectIndex%len(chars)]
 }
 
@@ -88,7 +88,7 @@ func RenderTimeline(summaries []domain.ProjectSummary, displayDate time.Time) st
 
 		// ブロック文字列を生成
 		blocks := make([]string, timelineBlocks)
-		for blockIdx := 0; blockIdx < timelineBlocks; blockIdx++ {
+		for blockIdx := range timelineBlocks {
 			checkTime := hourStart.Add(time.Duration(blockIdx*100) * time.Second)
 
 			activeProject := ""
