@@ -5,7 +5,21 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"worklog/internal/domain"
 )
+
+// resolveTagName はタグIDに対応するタグ名を返す。見つからない場合は空文字を返す。
+func resolveTagName(tags []domain.Tag, tagID string) string {
+	id := 0
+	fmt.Sscanf(tagID, "%d", &id)
+	for _, t := range tags {
+		if t.ID == id {
+			return t.Name
+		}
+	}
+	return ""
+}
 
 // formatTagDisplay はタグの表示形式をフォーマットする
 // タグ名がある場合: "タグ名 (ID)"
