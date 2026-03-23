@@ -45,6 +45,7 @@ func RenderDashboard(status *domain.ProjectStatus, summaries []domain.ProjectSum
 		durationStr := fmt.Sprintf("%s / %s", currentSessionStr, totalTimeStr)
 
 		statusLines = []string{
+			"",
 			fmt.Sprintf("■ %s running", status.Project),
 			fmt.Sprintf("%s • %s", status.StartTime.Format("15:04"), durationStr),
 		}
@@ -60,9 +61,11 @@ func RenderDashboard(status *domain.ProjectStatus, summaries []domain.ProjectSum
 
 	// Summary部分の内容を準備
 	summaryLines := []string{
+		"",
 		fmt.Sprintf("Today       %s", FormatDuration(totalTime)),
 		fmt.Sprintf("Projects    %d", projectCount),
 		fmt.Sprintf("Average     %s", FormatDuration(avgTime)),
+		"",
 	}
 
 	// 上部境界線（カラム幅から動的生成）
@@ -76,10 +79,7 @@ func RenderDashboard(status *domain.ProjectStatus, summaries []domain.ProjectSum
 	builder.WriteString(topLine)
 
 	// 各行を描画（最大行数を決定）
-	maxLines := len(statusLines)
-	if len(summaryLines) > maxLines {
-		maxLines = len(summaryLines)
-	}
+	maxLines := max(len(statusLines), len(summaryLines))
 
 	for i := 0; i < maxLines; i++ {
 		// Status部分

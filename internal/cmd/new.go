@@ -78,16 +78,15 @@ func handleNew(manager project.ProjectManager) error {
 			}
 		}
 
-		// 停止したプロジェクトがあれば表示
-		if status != nil {
-			stopTime := startTime
-			stopOutput := ui.RenderStopMessage(status.Project, status.StartTime, stopTime)
-			fmt.Print(stopOutput)
-		}
-
-		// 統一された出力
+		// 統一された出力（switchと一貫性）
 		tagDisplay := formatTagDisplay(tagID, tagName)
-		output := ui.RenderNewMessage(projectName, startTime, tagDisplay)
+		var oldProject string
+		var oldStartTime time.Time
+		if status != nil {
+			oldProject = status.Project
+			oldStartTime = status.StartTime
+		}
+		output := ui.RenderSwitchMessage(oldProject, oldStartTime, startTime, projectName, tagDisplay)
 		fmt.Print(output)
 		return nil
 	}
@@ -117,16 +116,15 @@ func handleNew(manager project.ProjectManager) error {
 		}
 	}
 
-	// 停止したプロジェクトがあれば表示
-	if status != nil {
-		stopTime := startTime
-		stopOutput := ui.RenderStopMessage(status.Project, status.StartTime, stopTime)
-		fmt.Print(stopOutput)
-	}
-
-	// 統一された出力
+	// 統一された出力（switchと一貫性）
 	tagDisplay := formatTagDisplay(tagID, tagName)
-	output := ui.RenderNewMessage(projectName, startTime, tagDisplay)
+	var oldProject string
+	var oldStartTime time.Time
+	if status != nil {
+		oldProject = status.Project
+		oldStartTime = status.StartTime
+	}
+	output := ui.RenderSwitchMessage(oldProject, oldStartTime, startTime, projectName, tagDisplay)
 	fmt.Print(output)
 	return nil
 }
