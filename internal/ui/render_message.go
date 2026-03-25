@@ -32,14 +32,18 @@ func RenderStopMessage(project string, startTime, stopTime time.Time) string {
 }
 
 func renderStopMessageWithWidth(project string, startTime, stopTime time.Time, width int) string {
-	elapsed := stopTime.Sub(startTime)
 	lines := []string{
 		fmt.Sprintf("%s stopped", project),
-		fmt.Sprintf("%s-%s %s %s",
+	}
+	if startTime.IsZero() {
+		lines = append(lines, stopTime.Format("15:04"))
+	} else {
+		elapsed := stopTime.Sub(startTime)
+		lines = append(lines, fmt.Sprintf("%s-%s %s %s",
 			startTime.Format("15:04"),
 			stopTime.Format("15:04"),
 			Bullet,
-			FormatDuration(elapsed)),
+			FormatDuration(elapsed)))
 	}
 	return renderRoundBox(lines, width)
 }
@@ -54,13 +58,17 @@ func renderSwitchMessageWithWidth(oldProject string, oldStartTime, switchTime ti
 
 	// 停止したプロジェクト
 	if oldProject != "" {
-		elapsed := switchTime.Sub(oldStartTime)
 		lines = append(lines, fmt.Sprintf("%s → stopped", oldProject))
-		lines = append(lines, fmt.Sprintf("%s-%s %s %s",
-			oldStartTime.Format("15:04"),
-			switchTime.Format("15:04"),
-			Bullet,
-			FormatDuration(elapsed)))
+		if oldStartTime.IsZero() {
+			lines = append(lines, switchTime.Format("15:04"))
+		} else {
+			elapsed := switchTime.Sub(oldStartTime)
+			lines = append(lines, fmt.Sprintf("%s-%s %s %s",
+				oldStartTime.Format("15:04"),
+				switchTime.Format("15:04"),
+				Bullet,
+				FormatDuration(elapsed)))
+		}
 	}
 
 	// 開始したプロジェクト

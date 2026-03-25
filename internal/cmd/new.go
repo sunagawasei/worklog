@@ -111,7 +111,7 @@ func handleNew(manager project.ProjectManager) error {
 		}
 	} else {
 		startTime = time.Now()
-		if err := manager.NewAt(projectName, tagID, time.Now()); err != nil {
+		if err := manager.NewAt(projectName, tagID, startTime); err != nil {
 			return err
 		}
 	}

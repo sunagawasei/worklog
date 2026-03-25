@@ -45,10 +45,14 @@ func dashboardData(status *domain.ProjectStatus, summaries []domain.ProjectSumma
 		totalTimeStr := FormatDurationShort(status.TotalTime)
 		durationStr := fmt.Sprintf("%s / %s", currentSessionStr, totalTimeStr)
 
+		startStr := status.StartTime.Format("15:04")
+		if status.StartTime.IsZero() {
+			startStr = "--:--"
+		}
 		statusLines = []string{
 			"",
 			fmt.Sprintf("■ %s running", status.Project),
-			fmt.Sprintf("%s • %s", status.StartTime.Format("15:04"), durationStr),
+			fmt.Sprintf("%s • %s", startStr, durationStr),
 		}
 		if status.TagName != "" {
 			statusLines = append(statusLines, status.TagName)

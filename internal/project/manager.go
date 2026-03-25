@@ -123,19 +123,22 @@ func (m *projectManager) Status() (*domain.ProjectStatus, error) {
 
 	tagName := m.getTagName(tag)
 
-	startTime := time.Now()
+	var startTime time.Time
 	totalTime := time.Duration(0)
 	currentSessionTime := time.Duration(0)
 
 	logs, err := m.logStorage.ReadToday(project)
 	if err == nil {
-		total, _, openStart := calculateSessions(logs)
+		total, ranges, openStart := calculateSessions(logs)
 		totalTime = total
 		if openStart != nil {
 			now := time.Now()
 			startTime = *openStart
 			totalTime += now.Sub(*openStart)
 			currentSessionTime = now.Sub(startTime)
+		} else if len(ranges) > 0 {
+			// 全セッション完了済み: 最後の完了セッションの開始時刻を使用
+			startTime = ranges[len(ranges)-1].Start
 		}
 	}
 

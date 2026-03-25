@@ -137,7 +137,7 @@ func handleSwitch(manager project.ProjectManager) error {
 		} else {
 			// 空欄の場合は現在時刻を使用
 			switchTime = time.Now()
-			if err := manager.SwitchAt(newProject, newTag, time.Now()); err != nil {
+			if err := manager.SwitchAt(newProject, newTag, switchTime); err != nil {
 				return err
 			}
 		}
@@ -177,7 +177,7 @@ func handleSwitch(manager project.ProjectManager) error {
 		}
 	} else {
 		switchTime = time.Now()
-		if err := manager.SwitchAt(newProject, newTag, time.Now()); err != nil {
+		if err := manager.SwitchAt(newProject, newTag, switchTime); err != nil {
 			return err
 		}
 	}

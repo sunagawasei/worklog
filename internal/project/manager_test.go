@@ -521,6 +521,96 @@ func TestProjectManager_Status_TagNameNotFound(t *testing.T) {
 	})
 }
 
+func TestProjectManager_Status_OpenStartNil(t *testing.T) {
+	t.Run("全セッション終了済みだがcurrentに登録されている場合", func(t *testing.T) {
+		baseTime := time.Date(2025, 9, 26, 11, 31, 0, 0, time.Local)
+		currentStorage := &mockCurrentStorage{
+			readResult: "worklog\t1",
+		}
+		logStorage := &mockLogStorage{
+			readResult: []storage.LogEntry{
+				{Timestamp: baseTime, Action: "start", Tag: "1"},
+				{Timestamp: baseTime.Add(29 * time.Minute), Action: "stop", Tag: "1"},
+			},
+		}
+		tagStorage := &mockTagStorage{
+			tags: []storage.Tag{{ID: 1, Name: "開発"}},
+		}
+
+		manager := NewProjectManager(currentStorage, logStorage, tagStorage)
+		status, err := manager.Status()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if status == nil {
+			t.Fatal("status should not be nil")
+		}
+		// StartTimeは最後の完了セッションの開始時刻であるべき（time.Now()ではない）
+		if !status.StartTime.Equal(baseTime) {
+			t.Errorf("StartTime should be last session start: got %v, want %v", status.StartTime, baseTime)
+		}
+		// TotalTimeは完了セッション分
+		expectedTotal := 29 * time.Minute
+		if status.TotalTime != expectedTotal {
+			t.Errorf("TotalTime: got %v, want %v", status.TotalTime, expectedTotal)
+		}
+		// CurrentSessionTimeはゼロ（オープンセッションなし）
+		if status.CurrentSessionTime != 0 {
+			t.Errorf("CurrentSessionTime should be 0: got %v", status.CurrentSessionTime)
+		}
+	})
+
+	t.Run("ReadTodayが空エントリを返す場合", func(t *testing.T) {
+		currentStorage := &mockCurrentStorage{
+			readResult: "worklog\t1",
+		}
+		logStorage := &mockLogStorage{
+			readResult: []storage.LogEntry{},
+		}
+		tagStorage := &mockTagStorage{
+			tags: []storage.Tag{{ID: 1, Name: "開発"}},
+		}
+
+		manager := NewProjectManager(currentStorage, logStorage, tagStorage)
+		status, err := manager.Status()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if status == nil {
+			t.Fatal("status should not be nil")
+		}
+		// ログがない場合、StartTimeはゼロ値であるべき
+		if !status.StartTime.IsZero() {
+			t.Errorf("StartTime should be zero when no entries: got %v", status.StartTime)
+		}
+	})
+
+	t.Run("ReadTodayがエラーの場合", func(t *testing.T) {
+		currentStorage := &mockCurrentStorage{
+			readResult: "worklog\t1",
+		}
+		logStorage := &mockLogStorage{
+			readError: errors.New("file not found"),
+		}
+		tagStorage := &mockTagStorage{
+			tags: []storage.Tag{{ID: 1, Name: "開発"}},
+		}
+
+		manager := NewProjectManager(currentStorage, logStorage, tagStorage)
+		status, err := manager.Status()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if status == nil {
+			t.Fatal("status should not be nil")
+		}
+		// エラー時もStartTimeはゼロ値であるべき
+		if !status.StartTime.IsZero() {
+			t.Errorf("StartTime should be zero when ReadToday errors: got %v", status.StartTime)
+		}
+	})
+}
+
 func TestProjectManager_List(t *testing.T) {
 	// モックの準備
 	currentStorage := &mockCurrentStorage{
