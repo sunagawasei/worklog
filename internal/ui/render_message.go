@@ -14,7 +14,7 @@ import (
 //	╰────────────────────────────────────────╯
 func renderRoundBox(lines []string, width int) string {
 	var builder strings.Builder
-	innerWidth := width - 4 // "│ " と " │" で4文字使用
+	innerWidth := width - 6 // "│  " と "  │" で6文字使用
 
 	builder.WriteString(RoundTL + strings.Repeat(LineH, width-2) + RoundTR + "\n")
 	for _, line := range lines {
