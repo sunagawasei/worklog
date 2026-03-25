@@ -9,12 +9,16 @@ import (
 
 // RenderHelp はヘルプメッセージを整形して表示する
 func RenderHelp() string {
+	return renderHelpWithWidth(contentWidth())
+}
+
+func renderHelpWithWidth(width int) string {
 	var builder strings.Builder
 
 	builder.WriteString("worklog ")
 	builder.WriteString(Bullet)
 	builder.WriteString(" プロジェクト稼働時間管理\n")
-	builder.WriteString(renderSeparator(StandardWidth))
+	builder.WriteString(renderSeparator(width))
 	builder.WriteString("\n")
 
 	builder.WriteString("\n")
@@ -47,7 +51,7 @@ func RenderHelp() string {
 	builder.WriteString("    worklog stop 18:00             # 18:00に停止\n")
 	builder.WriteString("    worklog timeline -1d           # 昨日のタイムライン\n")
 
-	builder.WriteString(renderSeparator(StandardWidth))
+	builder.WriteString(renderSeparator(width))
 	builder.WriteString("\n")
 
 	return builder.String()
@@ -55,20 +59,28 @@ func RenderHelp() string {
 
 // RenderError はエラーメッセージを丸角ボックスで整形して表示する
 func RenderError(message string) string {
+	return renderErrorWithWidth(message, contentWidth())
+}
+
+func renderErrorWithWidth(message string, width int) string {
 	lines := []string{
 		fmt.Sprintf("[!] %s", message),
 		"",
 		"'worklog help' で利用可能なコマンドを確認できます",
 	}
-	return renderRoundBox(lines, StandardWidth)
+	return renderRoundBox(lines, width)
 }
 
 // RenderTagList はタグ一覧を整形して表示する
 func RenderTagList(tags []domain.Tag) string {
+	return renderTagListWithWidth(tags, contentWidth())
+}
+
+func renderTagListWithWidth(tags []domain.Tag, width int) string {
 	var builder strings.Builder
 
 	builder.WriteString("Tags\n")
-	builder.WriteString(renderSeparator(StandardWidth))
+	builder.WriteString(renderSeparator(width))
 	builder.WriteString("\n")
 
 	if len(tags) == 0 {
@@ -80,7 +92,7 @@ func RenderTagList(tags []domain.Tag) string {
 		}
 	}
 
-	builder.WriteString(renderSeparator(StandardWidth))
+	builder.WriteString(renderSeparator(width))
 	builder.WriteString("\n")
 
 	return builder.String()
@@ -88,12 +100,20 @@ func RenderTagList(tags []domain.Tag) string {
 
 // RenderTagAdded はタグ追加完了メッセージを丸角ボックスで整形して表示する
 func RenderTagAdded(tag domain.Tag) string {
+	return renderTagAddedWithWidth(tag, contentWidth())
+}
+
+func renderTagAddedWithWidth(tag domain.Tag, width int) string {
 	lines := []string{fmt.Sprintf("Tag added: %s (ID: %d)", tag.Name, tag.ID)}
-	return renderRoundBox(lines, StandardWidth)
+	return renderRoundBox(lines, width)
 }
 
 // RenderTagDeleted はタグ削除完了メッセージを丸角ボックスで整形して表示する
 func RenderTagDeleted(tagID int, tagName string) string {
+	return renderTagDeletedWithWidth(tagID, tagName, contentWidth())
+}
+
+func renderTagDeletedWithWidth(tagID int, tagName string, width int) string {
 	lines := []string{fmt.Sprintf("Tag deleted: %s (ID: %d)", tagName, tagID)}
-	return renderRoundBox(lines, StandardWidth)
+	return renderRoundBox(lines, width)
 }

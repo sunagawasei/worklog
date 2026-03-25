@@ -8,9 +8,6 @@ import (
 	"worklog/internal/domain"
 )
 
-// listContentWidth はリスト表示の内容幅（固定）
-const listContentWidth = 32
-
 // renderDotLeaderLine はドットリーダーで左右の文字列を結合する
 // 例: "ProjectA ··············· 2h 30m"
 func renderDotLeaderLine(left, right string, totalWidth int) string {
@@ -26,7 +23,12 @@ func renderDotLeaderLine(left, right string, totalWidth int) string {
 
 // RenderList は本日のプロジェクト一覧を整形して表示する
 func RenderList(summaries []domain.ProjectSummary, now time.Time) string {
+	return renderListWithWidth(summaries, now, contentWidth())
+}
+
+func renderListWithWidth(summaries []domain.ProjectSummary, now time.Time, width int) string {
 	var builder strings.Builder
+	listW := width - 7 // 左マージン6 + Cross1
 
 	// 日付ヘッダー
 	dateStr := now.Format("2006-01-02")
@@ -36,7 +38,7 @@ func RenderList(summaries []domain.ProjectSummary, now time.Time) string {
 	if len(summaries) == 0 {
 		builder.WriteString(renderSeparator(6))
 		builder.WriteString(Cross)
-		builder.WriteString(renderSeparator(listContentWidth))
+		builder.WriteString(renderSeparator(listW))
 		builder.WriteString("\n")
 		builder.WriteString(fmt.Sprintf("      %s\n", LineV))
 		builder.WriteString(fmt.Sprintf("      %s 本日の作業履歴はありません\n", LineV))
@@ -44,7 +46,7 @@ func RenderList(summaries []domain.ProjectSummary, now time.Time) string {
 		builder.WriteString(fmt.Sprintf("      %s\n", LineV))
 		builder.WriteString(renderSeparator(6))
 		builder.WriteString(CrossB)
-		builder.WriteString(renderSeparator(listContentWidth))
+		builder.WriteString(renderSeparator(listW))
 		builder.WriteString("\n")
 		return builder.String()
 	}
@@ -52,7 +54,7 @@ func RenderList(summaries []domain.ProjectSummary, now time.Time) string {
 	// 上部区切り線
 	builder.WriteString(renderSeparator(6))
 	builder.WriteString(CrossL)
-	builder.WriteString(renderSeparator(listContentWidth))
+	builder.WriteString(renderSeparator(listW))
 	builder.WriteString("\n")
 
 	// 各プロジェクト（プロジェクト間に空行）
@@ -72,7 +74,7 @@ func RenderList(summaries []domain.ProjectSummary, now time.Time) string {
 		} else {
 			leftPart = fmt.Sprintf("%s %s", LineV, summary.Project)
 		}
-		line := renderDotLeaderLine(leftPart, durationStr, listContentWidth+7)
+		line := renderDotLeaderLine(leftPart, durationStr, width)
 		builder.WriteString(fmt.Sprintf("      %s\n", line))
 
 		// 時間範囲を表示
@@ -89,7 +91,7 @@ func RenderList(summaries []domain.ProjectSummary, now time.Time) string {
 
 			rangeDuration := FormatDurationShort(tr.Duration)
 			rangeLeft := fmt.Sprintf("%s %s %s", LineV, connector, timeRange)
-			rangeLine := renderDotLeaderLine(rangeLeft, rangeDuration, listContentWidth+7)
+			rangeLine := renderDotLeaderLine(rangeLeft, rangeDuration, width)
 			builder.WriteString(fmt.Sprintf("      %s\n", rangeLine))
 		}
 	}
@@ -100,12 +102,12 @@ func RenderList(summaries []domain.ProjectSummary, now time.Time) string {
 	// 下部区切り線（二重線でTotal行を強調）
 	builder.WriteString(strings.Repeat(LineH2, 6))
 	builder.WriteString(CrossB2)
-	builder.WriteString(strings.Repeat(LineH2, listContentWidth))
+	builder.WriteString(strings.Repeat(LineH2, listW))
 	builder.WriteString("\n")
 
 	// 合計行（ドットリーダーで右揃え）
 	totalStr := FormatDuration(totalDuration)
-	totalLine := renderDotLeaderLine("Total", totalStr, listContentWidth+7)
+	totalLine := renderDotLeaderLine("Total", totalStr, width)
 	builder.WriteString(fmt.Sprintf("      %s\n", totalLine))
 
 	return builder.String()

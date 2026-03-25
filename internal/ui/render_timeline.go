@@ -20,27 +20,13 @@ func selectBlockChar(projectIndex int) string {
 	return chars[projectIndex%len(chars)]
 }
 
-// timelineWidth はタイムラインの区切り線幅を計算する（端末幅に合わせる）
-func timelineWidth() int {
-	termWidth := GetTerminalWidth()
-	// 最低幅: " HH:00 "(7) + ブロック(36) = 43
-	if termWidth < 44 {
-		return 44
-	}
-	// 最大幅は80に制限（読みやすさのため）
-	if termWidth > 80 {
-		return 80
-	}
-	return termWidth
+// RenderTimeline は本日のプロジェクト作業をタイムライン形式で表示する
+func RenderTimeline(summaries []domain.ProjectSummary, displayDate time.Time) string {
+	return renderTimelineWithWidth(summaries, displayDate, contentWidth())
 }
 
-// RenderTimeline は本日のプロジェクト作業をタイムライン形式で表示する
-// summaries: プロジェクトサマリー一覧
-// displayDate: 表示対象日付（この日のタイムラインを描画）
-func RenderTimeline(summaries []domain.ProjectSummary, displayDate time.Time) string {
+func renderTimelineWithWidth(summaries []domain.ProjectSummary, displayDate time.Time, width int) string {
 	var builder strings.Builder
-
-	width := timelineWidth()
 	sep := strings.Repeat("─", width)
 
 	// 現在時刻を取得（マーカー表示判定用）

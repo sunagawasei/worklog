@@ -27,10 +27,11 @@ func renderRoundBox(lines []string, width int) string {
 }
 
 // RenderStopMessage は停止完了メッセージを整形して表示する
-// project: プロジェクト名
-// startTime: 開始時刻
-// stopTime: 停止時刻
 func RenderStopMessage(project string, startTime, stopTime time.Time) string {
+	return renderStopMessageWithWidth(project, startTime, stopTime, contentWidth())
+}
+
+func renderStopMessageWithWidth(project string, startTime, stopTime time.Time, width int) string {
 	elapsed := stopTime.Sub(startTime)
 	lines := []string{
 		fmt.Sprintf("%s stopped", project),
@@ -40,16 +41,15 @@ func RenderStopMessage(project string, startTime, stopTime time.Time) string {
 			Bullet,
 			FormatDuration(elapsed)),
 	}
-	return renderRoundBox(lines, StandardWidth)
+	return renderRoundBox(lines, width)
 }
 
 // RenderSwitchMessage はプロジェクト切り替えの状態遷移を整形して表示する
-// oldProject: 停止したプロジェクト名
-// oldStartTime: 停止したプロジェクトの開始時刻
-// switchTime: 切り替え時刻
-// newProject: 開始したプロジェクト名
-// newTag: 開始したプロジェクトのタグ表示
 func RenderSwitchMessage(oldProject string, oldStartTime, switchTime time.Time, newProject, newTag string) string {
+	return renderSwitchMessageWithWidth(oldProject, oldStartTime, switchTime, newProject, newTag, contentWidth())
+}
+
+func renderSwitchMessageWithWidth(oldProject string, oldStartTime, switchTime time.Time, newProject, newTag string, width int) string {
 	var lines []string
 
 	// 停止したプロジェクト
@@ -70,17 +70,18 @@ func RenderSwitchMessage(oldProject string, oldStartTime, switchTime time.Time, 
 		Bullet,
 		newTag))
 
-	return renderRoundBox(lines, StandardWidth)
+	return renderRoundBox(lines, width)
 }
 
 // RenderNewMessage は新規プロジェクト開始メッセージを整形して表示する
-// project: プロジェクト名
-// startTime: 開始時刻
-// tag: タグ表示
 func RenderNewMessage(project string, startTime time.Time, tag string) string {
+	return renderNewMessageWithWidth(project, startTime, tag, contentWidth())
+}
+
+func renderNewMessageWithWidth(project string, startTime time.Time, tag string, width int) string {
 	lines := []string{
 		fmt.Sprintf("%s started", project),
 		fmt.Sprintf("%s %s %s", startTime.Format("15:04"), Bullet, tag),
 	}
-	return renderRoundBox(lines, StandardWidth)
+	return renderRoundBox(lines, width)
 }

@@ -12,13 +12,17 @@ import (
 	"golang.org/x/term"
 )
 
-// StandardWidth はメッセージ・ヘルプ・タグ・エラー表示の統一幅
+// StandardWidth はメッセージ・ヘルプ・タグ・エラー表示の統一幅（後方互換用）
 const StandardWidth = 44
 
-// ダッシュボードのカラム幅定数
+// レスポンシブレイアウト定数
 const (
-	dashStatusCol  = 24 // Status列の内容幅
-	dashSummaryCol = 22 // Summary列の内容幅
+	minContentWidth = 44 // 全コンポーネントの最小幅（= StandardWidth）
+	maxContentWidth = 80 // 全コンポーネントの最大幅
+	dashFrameWidth  = 7  // 2カラムダッシュボードのフレーム幅
+	dashSingleFrame = 4  // 1カラムダッシュボードのフレーム幅
+	maxStatusCol    = 40 // Status列の上限
+	fixedSummaryCol = 22 // Summary列の基本幅
 )
 
 // ボックス描画文字の定数
@@ -82,6 +86,34 @@ func FormatDurationShort(d time.Duration) string {
 		return fmt.Sprintf("%dm", minutes)
 	}
 	return fmt.Sprintf("%dh %02dm", hours, minutes)
+}
+
+// contentWidth はターミナル幅に応じた有効コンテンツ幅を返す
+func contentWidth() int {
+	return contentWidthFor(GetTerminalWidth())
+}
+
+// contentWidthFor は指定幅からコンテンツ幅を算出する（テスト用）
+func contentWidthFor(termWidth int) int {
+	if termWidth < minContentWidth {
+		return minContentWidth
+	}
+	if termWidth > maxContentWidth {
+		return maxContentWidth
+	}
+	return termWidth
+}
+
+// dashColumns は2カラムダッシュボードのStatus/Summary列幅を返す
+// 不変条件: statusCol + summaryCol + dashFrameWidth == cw
+func dashColumns(cw int) (statusCol, summaryCol int) {
+	available := cw - dashFrameWidth
+	statusCol = available - fixedSummaryCol
+	if statusCol > maxStatusCol {
+		statusCol = maxStatusCol
+	}
+	summaryCol = available - statusCol
+	return
 }
 
 // GetTerminalWidth はターミナルの幅を取得する

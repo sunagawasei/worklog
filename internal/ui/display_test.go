@@ -919,3 +919,227 @@ func TestFormatDurationShort(t *testing.T) {
 		}
 	})
 }
+
+// === レスポンシブUI テスト ===
+
+func TestContentWidthFor(t *testing.T) {
+	t.Run("最小幅保証", func(t *testing.T) {
+		if cw := contentWidthFor(20); cw != 44 {
+			t.Errorf("期待: 44, 実際: %d", cw)
+		}
+	})
+
+	t.Run("範囲内はそのまま", func(t *testing.T) {
+		if cw := contentWidthFor(60); cw != 60 {
+			t.Errorf("期待: 60, 実際: %d", cw)
+		}
+	})
+
+	t.Run("最大幅制限", func(t *testing.T) {
+		if cw := contentWidthFor(120); cw != 80 {
+			t.Errorf("期待: 80, 実際: %d", cw)
+		}
+	})
+
+	t.Run("境界値44", func(t *testing.T) {
+		if cw := contentWidthFor(44); cw != 44 {
+			t.Errorf("期待: 44, 実際: %d", cw)
+		}
+	})
+
+	t.Run("境界値80", func(t *testing.T) {
+		if cw := contentWidthFor(80); cw != 80 {
+			t.Errorf("期待: 80, 実際: %d", cw)
+		}
+	})
+}
+
+func TestDashColumns(t *testing.T) {
+	t.Run("最小幅53で現在と同じ", func(t *testing.T) {
+		s, sm := dashColumns(53)
+		if s != 24 || sm != 22 {
+			t.Errorf("期待: status=24, summary=22, 実際: status=%d, summary=%d", s, sm)
+		}
+	})
+
+	t.Run("幅69でStatus上限", func(t *testing.T) {
+		s, sm := dashColumns(69)
+		if s != 40 || sm != 22 {
+			t.Errorf("期待: status=40, summary=22, 実際: status=%d, summary=%d", s, sm)
+		}
+	})
+
+	t.Run("幅80で余剰はSummaryへ", func(t *testing.T) {
+		s, sm := dashColumns(80)
+		if s != 40 || sm != 33 {
+			t.Errorf("期待: status=40, summary=33, 実際: status=%d, summary=%d", s, sm)
+		}
+	})
+
+	t.Run("不変条件: statusCol+summaryCol+7==cw", func(t *testing.T) {
+		for cw := 53; cw <= 80; cw++ {
+			s, sm := dashColumns(cw)
+			if s+sm+dashFrameWidth != cw {
+				t.Errorf("cw=%d: status(%d)+summary(%d)+7=%d != %d", cw, s, sm, s+sm+7, cw)
+			}
+		}
+	})
+}
+
+func TestRenderDashboard_SingleColumn(t *testing.T) {
+	now := time.Date(2025, 9, 30, 15, 0, 0, 0, time.Local)
+	status := &domain.ProjectStatus{
+		Project:            "TestProject",
+		Tag:                "1",
+		TagName:            "Development",
+		StartTime:          time.Date(2025, 9, 30, 10, 0, 0, 0, time.Local),
+		CurrentSessionTime: 1 * time.Hour,
+		TotalTime:          3 * time.Hour,
+	}
+	summaries := []domain.ProjectSummary{
+		{Project: "TestProject", TotalTime: 3 * time.Hour},
+	}
+
+	result := renderDashboardWithWidth(status, summaries, now, 44)
+
+	// 1カラムなので┬（2カラム区切り）は含まない
+	if strings.Contains(result, "┬") {
+		t.Error("1カラムモードで┬が含まれている")
+	}
+
+	// Status/Summaryラベルが含まれるか
+	if !strings.Contains(result, "Status") {
+		t.Error("'Status'が含まれていない")
+	}
+	if !strings.Contains(result, "Summary") {
+		t.Error("'Summary'が含まれていない")
+	}
+
+	// 中間セパレーター（├...┤）
+	if !strings.Contains(result, CrossL) {
+		t.Errorf("中間セパレーター'%s'が含まれていない", CrossL)
+	}
+	if !strings.Contains(result, CrossR) {
+		t.Errorf("中間セパレーター'%s'が含まれていない", CrossR)
+	}
+
+	// コンテンツ
+	if !strings.Contains(result, "TestProject") {
+		t.Error("プロジェクト名が含まれていない")
+	}
+	if !strings.Contains(result, "Today") {
+		t.Error("'Today'が含まれていない")
+	}
+}
+
+func TestRenderDashboard_WideWidth(t *testing.T) {
+	now := time.Date(2025, 9, 30, 15, 0, 0, 0, time.Local)
+	status := &domain.ProjectStatus{
+		Project:            "VeryLongProjectNameThatWouldBeTruncated",
+		Tag:                "1",
+		TagName:            "Development",
+		StartTime:          time.Date(2025, 9, 30, 10, 0, 0, 0, time.Local),
+		CurrentSessionTime: 1 * time.Hour,
+		TotalTime:          4 * time.Hour,
+	}
+	summaries := []domain.ProjectSummary{
+		{Project: "VeryLongProjectNameThatWouldBeTruncated", TotalTime: 4 * time.Hour},
+	}
+
+	result80 := renderDashboardWithWidth(status, summaries, now, 80)
+	result53 := renderDashboardWithWidth(status, summaries, now, 53)
+
+	// 幅80ではプロジェクト名がより多く表示される
+	if !strings.Contains(result80, "VeryLongProjectName") {
+		t.Error("幅80でプロジェクト名が十分に表示されていない")
+	}
+
+	// 幅53では切り詰められる
+	if strings.Contains(result53, "VeryLongProjectNameThatWouldBeTruncated") {
+		t.Error("幅53でプロジェクト名が切り詰められていない")
+	}
+
+	// 両方とも2カラム
+	if !strings.Contains(result80, "┬") {
+		t.Error("幅80で2カラム区切りがない")
+	}
+	if !strings.Contains(result53, "┬") {
+		t.Error("幅53で2カラム区切りがない")
+	}
+}
+
+func TestRenderListWithWidth(t *testing.T) {
+	baseTime := time.Date(2025, 9, 30, 10, 0, 0, 0, time.Local)
+	summaries := []domain.ProjectSummary{
+		{
+			Project:   "ProjectA",
+			TagName:   "Dev",
+			TotalTime: 2 * time.Hour,
+			TimeRanges: []domain.TimeRange{
+				{Start: baseTime, End: baseTime.Add(2 * time.Hour), Duration: 2 * time.Hour},
+			},
+		},
+	}
+	now := baseTime.Add(8 * time.Hour)
+
+	result44 := renderListWithWidth(summaries, now, 44)
+	result80 := renderListWithWidth(summaries, now, 80)
+
+	// 両方にプロジェクト名が含まれる
+	if !strings.Contains(result44, "ProjectA") {
+		t.Error("幅44でProjectAが含まれていない")
+	}
+	if !strings.Contains(result80, "ProjectA") {
+		t.Error("幅80でProjectAが含まれていない")
+	}
+
+	// 幅80のほうがドットリーダーが長い（行が長い）
+	lines44 := strings.Split(result44, "\n")
+	lines80 := strings.Split(result80, "\n")
+	var maxLen44, maxLen80 int
+	for _, l := range lines44 {
+		if w := displayWidth(l); w > maxLen44 {
+			maxLen44 = w
+		}
+	}
+	for _, l := range lines80 {
+		if w := displayWidth(l); w > maxLen80 {
+			maxLen80 = w
+		}
+	}
+	if maxLen80 <= maxLen44 {
+		t.Errorf("幅80の最大行幅(%d)が幅44(%d)以下", maxLen80, maxLen44)
+	}
+}
+
+func TestProgressBarFit(t *testing.T) {
+	t.Run("statusCol=24で収まる", func(t *testing.T) {
+		result := renderTimeProgressBarFit(3*time.Hour, 8*time.Hour, 24)
+		w := displayWidth(result)
+		if w > 24 {
+			t.Errorf("表示幅%dが24を超過: %q", w, result)
+		}
+		if !strings.Contains(result, "3h") {
+			t.Errorf("時間情報が含まれていない: %q", result)
+		}
+	})
+
+	t.Run("statusCol=40で収まる", func(t *testing.T) {
+		result := renderTimeProgressBarFit(3*time.Hour, 8*time.Hour, 40)
+		w := displayWidth(result)
+		if w > 40 {
+			t.Errorf("表示幅%dが40を超過: %q", w, result)
+		}
+		// バー文字が含まれる
+		if !strings.Contains(result, BlockFull) && !strings.Contains(result, BlockLight) {
+			t.Errorf("バーが含まれていない: %q", result)
+		}
+	})
+
+	t.Run("statusCol=16でもパニックしない", func(t *testing.T) {
+		result := renderTimeProgressBarFit(3*time.Hour, 8*time.Hour, 16)
+		if result == "" {
+			t.Error("空文字列が返された")
+		}
+	})
+}
