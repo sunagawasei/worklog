@@ -17,15 +17,13 @@ import (
 
 // ProjectDisplay は選択リストで表示するプロジェクト情報
 type ProjectDisplay struct {
-	Project       string
-	Tag           string
-	TagName       string // タグ名
-	Time          string // 表示用の時間文字列
-	Status        string // 状態アイコン（■ stopped / ▫ paused）
-	IsRunning     bool   // 現在稼働中かどうか
-	DateLabel     string // 日付ラベル（[Today], [2 days ago]など）
-	IsSeparator   bool   // セパレーター行かどうか
-	SeparatorText string // セパレーター行の表示テキスト
+	Project   string
+	Tag       string
+	TagName   string // タグ名
+	Time      string // 表示用の時間文字列
+	Status    string // 状態アイコン（■ stopped / ▫ paused）
+	IsRunning bool   // 現在稼働中かどうか
+	DateLabel string // 日付グループプレフィックス（固定幅 DatePrefixWidth 文字）
 }
 
 // PromptUI は対話的UIのインターフェース
@@ -46,8 +44,8 @@ func formatTagID(id int) string {
 // termWidth: ターミナルの幅、tagWidth: タグ名の表示幅（0の場合はタグなし）
 func truncateProjectName(project string, termWidth int, tagWidth int) string {
 	// 固定要素の幅を計算
-	// "  ▸ " (4) + "  " (2) + timeStr (8) + "  " (2) + status (10) + "  " (2) + dateLabel (13) + margin (5)
-	fixedWidth := 46
+	// "  ▸ " (4) + DatePrefixWidth (13) + "  " (2) + timeStr (8) + "  " (2) + status (10) + margin (5)
+	fixedWidth := 4 + DatePrefixWidth + 2 + 8 + 2 + 10 + 5
 	if tagWidth > 0 {
 		fixedWidth += tagWidth + 2 // タグ名 + "  " セパレーター
 	}
@@ -69,8 +67,10 @@ func truncateProjectWithTag(project, tagName string) string {
 }
 
 // buildProjectLabel はProjectDisplayからhuh選択リスト用の表示文字列を生成する
+// DateLabel は固定幅13文字のプレフィックスとして先頭に表示される（switch.goで整形済み）
 func buildProjectLabel(pd ProjectDisplay) string {
 	var sb strings.Builder
+	sb.WriteString(pd.DateLabel)
 	name := truncateProjectWithTag(pd.Project, pd.TagName)
 	sb.WriteString(name)
 	if pd.TagName != "" {
@@ -81,10 +81,6 @@ func buildProjectLabel(pd ProjectDisplay) string {
 	sb.WriteString(pd.Time)
 	sb.WriteString("  ")
 	sb.WriteString(pd.Status)
-	if pd.DateLabel != "" {
-		sb.WriteString("  ")
-		sb.WriteString(pd.DateLabel)
-	}
 	return sb.String()
 }
 
@@ -201,30 +197,18 @@ func (p *promptUIImpl) ConfirmAction(action string) (bool, error) {
 }
 
 // SelectProjectFromList はプロジェクトリストから選択する
-// セパレーター項目はオプションリストから除外し、DateLabelで日付グループを識別する
 func (p *promptUIImpl) SelectProjectFromList(projects []ProjectDisplay) (*ProjectDisplay, error) {
 	if len(projects) == 0 {
 		return nil, errors.New("利用可能なプロジェクトがありません")
 	}
 
-	// セパレーターを除いたオプションリストを構築（値は元スライスのインデックス）
-	var options []huh.Option[int]
-	firstIdx := -1
+	// 全項目をオプションリストに構築（値は元スライスのインデックス）
+	options := make([]huh.Option[int], len(projects))
 	for i, pd := range projects {
-		if pd.IsSeparator {
-			continue
-		}
-		if firstIdx == -1 {
-			firstIdx = i
-		}
-		options = append(options, huh.NewOption(buildProjectLabel(pd), i))
+		options[i] = huh.NewOption(buildProjectLabel(pd), i)
 	}
 
-	if len(options) == 0 {
-		return nil, errors.New("利用可能なプロジェクトがありません")
-	}
-
-	selectedIdx := firstIdx
+	selectedIdx := 0
 	err := huh.NewSelect[int]().
 		Title("プロジェクトを選択").
 		Options(options...).

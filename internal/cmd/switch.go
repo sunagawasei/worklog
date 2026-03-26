@@ -3,8 +3,10 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/mattn/go-runewidth"
 	"worklog/internal/project"
 	"worklog/internal/ui"
 )
@@ -43,9 +45,15 @@ func handleSwitch(manager project.ProjectManager) error {
 		// UIインスタンスを作成
 		promptUI := ui.NewPromptUI()
 
-		// 稼働中でないプロジェクトを今日と過去に分けてリストアップ
-		var todayProjects []ui.ProjectDisplay
-		var pastProjects []ui.ProjectDisplay
+		// dateGroup は同じ日付ラベルのプロジェクト群
+		type dateGroup struct {
+			label    string
+			projects []ui.ProjectDisplay
+		}
+
+		// formatDateLabel の結果ごとにグループ化（順序保持）
+		var groups []dateGroup
+		groupIndex := map[string]int{}
 
 		for _, summary := range summaries {
 			// 現在稼働中のプロジェクトは除外
@@ -53,13 +61,7 @@ func handleSwitch(manager project.ProjectManager) error {
 				continue
 			}
 
-			// 稼働時間をフォーマット
 			timeStr := ui.FormatDuration(summary.TotalTime)
-
-			// 状態アイコン（一時停止中のプロジェクト）
-			statusIcon := "▫ paused"
-
-			// 日付ラベルを生成
 			dateLabel := formatDateLabel(summary.LastActivity)
 
 			pd := ui.ProjectDisplay{
@@ -67,32 +69,31 @@ func handleSwitch(manager project.ProjectManager) error {
 				Tag:       summary.Tag,
 				TagName:   summary.TagName,
 				Time:      timeStr,
-				Status:    statusIcon,
+				Status:    "▫ paused",
 				IsRunning: false,
-				DateLabel: dateLabel,
 			}
 
-			// 今日と過去でグループ分け
-			if dateLabel == "[Today]" {
-				todayProjects = append(todayProjects, pd)
+			if idx, ok := groupIndex[dateLabel]; ok {
+				groups[idx].projects = append(groups[idx].projects, pd)
 			} else {
-				pastProjects = append(pastProjects, pd)
+				groupIndex[dateLabel] = len(groups)
+				groups = append(groups, dateGroup{label: dateLabel, projects: []ui.ProjectDisplay{pd}})
 			}
 		}
 
-		// 最終的なリストを作成（今日 → セパレーター → 過去）
+		// 各グループの先頭項目にDateLabelプレフィックスを設定（固定幅: ui.DatePrefixWidth）
 		var selectableProjects []ui.ProjectDisplay
-		selectableProjects = append(selectableProjects, todayProjects...)
-
-		// 両方のグループが存在する場合のみセパレーターを挿入
-		if len(todayProjects) > 0 && len(pastProjects) > 0 {
-			selectableProjects = append(selectableProjects, ui.ProjectDisplay{
-				IsSeparator:   true,
-				SeparatorText: "────────────────────────────────",
-			})
+		for _, g := range groups {
+			for i, pd := range g.projects {
+				if i == 0 {
+					padding := ui.DatePrefixWidth - runewidth.StringWidth(g.label)
+					pd.DateLabel = g.label + strings.Repeat(" ", padding)
+				} else {
+					pd.DateLabel = strings.Repeat(" ", ui.DatePrefixWidth)
+				}
+				selectableProjects = append(selectableProjects, pd)
+			}
 		}
-
-		selectableProjects = append(selectableProjects, pastProjects...)
 
 		if len(selectableProjects) == 0 {
 			fmt.Fprint(os.Stderr, ui.RenderError("切り替え可能なプロジェクトがありません"))

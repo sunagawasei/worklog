@@ -50,13 +50,7 @@ func (m *mockPromptUI) SelectProjectFromList(projects []ProjectDisplay) (*Projec
 		return &projects[0], nil
 	}
 
-	// セパレーターが選択された場合はエラーを返す
-	selected := &projects[m.selectedProjectIndex]
-	if selected.IsSeparator {
-		return nil, errors.New("セパレーターは選択できません")
-	}
-
-	return selected, nil
+	return &projects[m.selectedProjectIndex], nil
 }
 
 func TestPromptUI_SelectTag_EmptyTags(t *testing.T) {
@@ -219,84 +213,34 @@ func TestFormatTagID(t *testing.T) {
 	})
 }
 
-func TestProjectDisplay_SeparatorFields(t *testing.T) {
-	t.Run("通常のプロジェクトはセパレーターではない", func(t *testing.T) {
+func TestBuildProjectLabel_WithPrefix(t *testing.T) {
+	t.Run("DateLabelプレフィックスが先頭に表示される", func(t *testing.T) {
 		pd := ProjectDisplay{
-			Project:     "TestProject",
-			Tag:         "Development",
-			Time:        "1時間30分",
-			Status:      "▫ paused",
-			IsRunning:   false,
-			DateLabel:   "[Today]",
-			IsSeparator: false,
+			Project:   "TestProject",
+			TagName:   "開発",
+			Time:      "1h 30m",
+			Status:    "▫ paused",
+			DateLabel: "[Today]      ", // 固定幅13文字
 		}
 
-		if pd.IsSeparator {
-			t.Error("通常のプロジェクトでIsSeparatorがtrueになっています")
+		label := buildProjectLabel(pd)
+		if label[:7] != "[Today]" {
+			t.Errorf("DateLabelが先頭に表示されていません: '%s'", label[:13])
 		}
 	})
 
-	t.Run("セパレーターアイテムの作成", func(t *testing.T) {
-		separator := ProjectDisplay{
-			IsSeparator:   true,
-			SeparatorText: "────────────────────────────────",
+	t.Run("空のDateLabelはスペースになる", func(t *testing.T) {
+		pd := ProjectDisplay{
+			Project:   "TestProject",
+			TagName:   "",
+			Time:      "1h 30m",
+			Status:    "▫ paused",
+			DateLabel: "             ", // 13文字の空白
 		}
 
-		if !separator.IsSeparator {
-			t.Error("セパレーターアイテムでIsSeparatorがfalseです")
-		}
-		if separator.SeparatorText == "" {
-			t.Error("セパレーターテキストが空です")
-		}
-	})
-}
-
-func TestMockPromptUI_SelectProjectFromList_WithSeparator(t *testing.T) {
-	t.Run("セパレーターが選択された場合はエラーを返す", func(t *testing.T) {
-		mockUI := &mockPromptUI{
-			selectedProjectIndex: 2, // セパレーターを選択
-		}
-
-		projects := []ProjectDisplay{
-			{Project: "ProjectA", Tag: "Development", Time: "1時間30分", DateLabel: "[Today]"},
-			{Project: "ProjectB", Tag: "MTG", Time: "2時間00分", DateLabel: "[Today]"},
-			{IsSeparator: true, SeparatorText: "────────────────────────────────"},
-			{Project: "ProjectC", Tag: "REV", Time: "0時間45分", DateLabel: "[2 days ago]"},
-		}
-
-		selected, err := mockUI.SelectProjectFromList(projects)
-
-		// セパレーターが選択された場合、エラーが返されるべき
-		if err == nil {
-			t.Error("セパレーター選択時にエラーが返されるべきです")
-		}
-		if selected != nil {
-			t.Error("セパレーター選択時はnilを返すべきです")
-		}
-	})
-
-	t.Run("セパレーター以外の項目は正常に選択できる", func(t *testing.T) {
-		mockUI := &mockPromptUI{
-			selectedProjectIndex: 3, // セパレーター後のプロジェクト
-		}
-
-		projects := []ProjectDisplay{
-			{Project: "ProjectA", Tag: "Development", Time: "1時間30分", DateLabel: "[Today]"},
-			{Project: "ProjectB", Tag: "MTG", Time: "2時間00分", DateLabel: "[Today]"},
-			{IsSeparator: true, SeparatorText: "────────────────────────────────"},
-			{Project: "ProjectC", Tag: "REV", Time: "0時間45分", DateLabel: "[2 days ago]"},
-		}
-
-		selected, err := mockUI.SelectProjectFromList(projects)
-		if err != nil {
-			t.Errorf("エラーが発生: %v", err)
-		}
-		if selected == nil {
-			t.Error("選択されたプロジェクトがnilです")
-			return
-		}
-		if selected.Project != "ProjectC" {
-			t.Errorf("期待値: ProjectC, 実際: %s", selected.Project)
+		label := buildProjectLabel(pd)
+		if label[:13] != "             " {
+			t.Errorf("空DateLabelが空白になっていません: '%s'", label[:13])
 		}
 	})
 }
@@ -313,8 +257,8 @@ func TestTruncateProjectName(t *testing.T) {
 		longName := "とても長いプロジェクト名でターミナル幅を超えてしまうもの"
 		result := truncateProjectName(longName, 80, 0)
 
-		// 80文字幅の場合、固定要素で46文字使うので、34文字に切り詰められる
-		// 全角文字は2文字幅なので、17文字程度に切り詰められる
+		// 80文字幅の場合、固定要素で44文字使うので、36文字に切り詰められる
+		// 全角文字は2文字幅なので、18文字程度に切り詰められる
 		if len(result) >= len(longName) {
 			t.Errorf("プロジェクト名が切り詰められていません: '%s'", result)
 		}

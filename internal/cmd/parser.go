@@ -159,7 +159,7 @@ func formatDateLabel(lastActivity time.Time) string {
 		return "[Yesterday]"
 	} else if daysDiff < 7 {
 		return fmt.Sprintf("[%d days ago]", daysDiff)
-	} else if daysDiff < 14 {
+	} else if daysDiff <= 14 {
 		weeks := daysDiff / 7
 		if weeks == 1 {
 			return "[1 week ago]"

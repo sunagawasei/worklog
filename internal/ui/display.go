@@ -15,6 +15,10 @@ import (
 // StandardWidth はメッセージ・ヘルプ・タグ・エラー表示の統一幅（後方互換用）
 const StandardWidth = 44
 
+// DatePrefixWidth はプロジェクト選択リストの日付ラベルプレフィックスの固定幅
+// 最長ラベル "[1 week ago]" = 12文字 + 1スペース = 13文字
+const DatePrefixWidth = 13
+
 // レスポンシブレイアウト定数
 const (
 	minContentWidth = 44 // 全コンポーネントの最小幅（= StandardWidth）
