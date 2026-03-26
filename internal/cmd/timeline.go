@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"worklog/internal/domain"
@@ -11,32 +10,36 @@ import (
 )
 
 // handleTimeline は本日のタイムライン表示を処理する
-func handleTimeline(manager project.ProjectManager) error {
+func handleTimeline(manager project.ProjectManager, opts ExecOptions) error {
 	var summaries []domain.ProjectSummary
 	var displayDate time.Time
 	var err error
 
-	// 日付引数があるかチェック（3番目の引数）
-	if len(os.Args) >= 3 && len(os.Args[2]) > 0 {
-		// 日付が指定された場合
-		date, parseErr := parseDateArg(os.Args[2])
+	// opts.Args[0]="timeline", opts.Args[1]=日付引数
+	if len(opts.Args) >= 2 && len(opts.Args[1]) > 0 {
+		date, parseErr := parseDateArg(opts.Args[1])
 		if parseErr != nil {
-			return fmt.Errorf("日付の形式が不正です: %w", parseErr)
+			return jsonError(opts, "INVALID_DATE_FORMAT", fmt.Sprintf("日付の形式が不正です: %v", parseErr))
 		}
 		displayDate = date
 		summaries, err = manager.ListOnDate(date)
 	} else {
-		// 日付指定なしの場合は本日
 		displayDate = time.Now()
 		summaries, err = manager.List()
 	}
 
 	if err != nil {
-		return err
+		return jsonError(opts, "INTERNAL_ERROR", err.Error())
 	}
 
-	// タイムラインを表示
+	if opts.JSONMode {
+		for _, s := range summaries {
+			writeJSON(opts.writer(), toTimelineItemJSON(s))
+		}
+		return nil
+	}
+
 	output := ui.RenderTimeline(summaries, displayDate)
-	fmt.Print(output)
+	fmt.Fprint(opts.writer(), output)
 	return nil
 }

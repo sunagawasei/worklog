@@ -1,9 +1,7 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
-	"os"
 	"time"
 
 	"worklog/internal/project"
@@ -11,31 +9,34 @@ import (
 )
 
 // handleStop は現在のプロジェクトを停止する
-func handleStop(manager project.ProjectManager) error {
-	// 先に現在のプロジェクト情報を取得
+func handleStop(manager project.ProjectManager, opts ExecOptions) error {
 	status, err := manager.Status()
 	if err != nil {
-		return err
+		return jsonError(opts, "INTERNAL_ERROR", err.Error())
 	}
 	if status == nil {
-		return errors.New("稼働中のプロジェクトがありません")
+		return jsonError(opts, "NO_ACTIVE_PROJECT", "稼働中のプロジェクトがありません")
 	}
 
 	var stopTime time.Time
 
-	// 時刻指定があるかチェック（3番目の引数）
-	if len(os.Args) >= 3 && len(os.Args[2]) > 0 {
-		// コマンドライン引数で時刻が指定された場合
-		timestamp, err := parseTimeArg(os.Args[2])
+	// opts.Args: [0]="stop", [1]=時刻(任意)
+	if len(opts.Args) >= 2 && len(opts.Args[1]) > 0 {
+		timestamp, err := parseTimeArg(opts.Args[1])
 		if err != nil {
-			return fmt.Errorf("時刻の形式が不正です: %w", err)
+			return jsonError(opts, "INVALID_TIME_FORMAT", fmt.Sprintf("時刻の形式が不正です: %v", err))
 		}
 		stopTime = timestamp
 		if err := manager.StopAt(timestamp); err != nil {
-			return err
+			return jsonError(opts, "INTERNAL_ERROR", err.Error())
+		}
+	} else if opts.NoInteractive {
+		stopTime = time.Now()
+		if err := manager.StopAt(stopTime); err != nil {
+			return jsonError(opts, "INTERNAL_ERROR", err.Error())
 		}
 	} else {
-		// 引数なしの場合は対話モードで時刻入力
+		// 対話モード
 		promptUI := ui.NewPromptUI()
 		timeStr, err := promptUI.InputTime("停止時刻")
 		if err != nil {
@@ -43,7 +44,6 @@ func handleStop(manager project.ProjectManager) error {
 		}
 
 		if timeStr != "" {
-			// 時刻が入力された場合
 			timestamp, err := parseTimeArg(timeStr)
 			if err != nil {
 				return fmt.Errorf("時刻の形式が不正です: %w", err)
@@ -53,7 +53,6 @@ func handleStop(manager project.ProjectManager) error {
 				return err
 			}
 		} else {
-			// 空欄の場合は現在時刻を使用
 			stopTime = time.Now()
 			if err := manager.StopAt(stopTime); err != nil {
 				return err
@@ -61,8 +60,19 @@ func handleStop(manager project.ProjectManager) error {
 		}
 	}
 
-	// 新しいレンダラーを使用して表示
+	if opts.JSONMode {
+		out := actionJSON{
+			Action:   "stop",
+			Project:  status.Project,
+			TagID:    status.Tag,
+			TagName:  status.TagName,
+			StopTime: stopTime.Format(time.RFC3339),
+		}
+		writeJSON(opts.writer(), out)
+		return nil
+	}
+
 	output := ui.RenderStopMessage(status.Project, status.StartTime, stopTime)
-	fmt.Print(output)
+	fmt.Fprint(opts.writer(), output)
 	return nil
 }

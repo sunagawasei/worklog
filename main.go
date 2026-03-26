@@ -25,9 +25,15 @@ func run() int {
 	// ProjectManagerを作成
 	manager := project.NewProjectManager(currentStorage, logStorage, tagStorage)
 
+	// グローバルフラグを抽出してExecOptionsを構築
+	opts := cmd.ParseGlobalFlags(os.Args[1:])
+	opts.Writer = os.Stdout
+
 	// コマンドを実行（依存性を注入）
-	if err := cmd.Execute(manager); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	if err := cmd.Execute(manager, opts); err != nil {
+		if _, ok := err.(cmd.HandledError); !ok {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		}
 		return 1
 	}
 	return 0

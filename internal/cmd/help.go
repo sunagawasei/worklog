@@ -7,7 +7,7 @@ import (
 )
 
 // showHelp はヘルプメッセージを表示する
-func showHelp() {
+func showHelp(opts ExecOptions) {
 	output := ui.RenderHelp()
-	fmt.Print(output)
+	fmt.Fprint(opts.writer(), output)
 }

@@ -25,6 +25,8 @@ type mockProjectManager struct {
 	tagsError           error
 	recentSummaries     []domain.ProjectSummary
 	recentError         error
+	addTagResult        domain.Tag
+	addTagError         error
 }
 
 func (m *mockProjectManager) New(project, tag string) error {
@@ -84,7 +86,7 @@ func (m *mockProjectManager) ListRecent(days int) ([]domain.ProjectSummary, erro
 
 func (m *mockProjectManager) AddTag(name string) (domain.Tag, error) {
 	m.calledMethods = append(m.calledMethods, fmt.Sprintf("AddTag(%s)", name))
-	return domain.Tag{}, nil
+	return m.addTagResult, m.addTagError
 }
 
 func (m *mockProjectManager) DeleteTag(id int) error {

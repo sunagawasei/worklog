@@ -2,38 +2,37 @@ package cmd
 
 import (
 	"fmt"
-	"os"
+	"strconv"
 	"time"
 
 	"worklog/internal/project"
+	"worklog/internal/storage"
 	"worklog/internal/ui"
 )
 
 // handleNew は新規プロジェクトを開始する
-func handleNew(manager project.ProjectManager) error {
+func handleNew(manager project.ProjectManager, opts ExecOptions) error {
 	var projectName, tagID, tagName string
 	var err error
 
-	// 引数が十分にある場合は従来の動作
-	if len(os.Args) >= 4 {
-		projectName = os.Args[2]
-		tagID = os.Args[3]
-		// タグ名を取得
+	// opts.Args: [0]="new", [1]=プロジェクト名, [2]=タグID, [3]=時刻(任意)
+	if len(opts.Args) >= 3 {
+		projectName = opts.Args[1]
+		tagID = opts.Args[2]
 		if tags, err := manager.GetTags(); err == nil {
 			tagName = resolveTagName(tags, tagID)
 		}
+	} else if opts.NoInteractive {
+		return jsonError(opts, "MISSING_ARGUMENTS", "プロジェクト名とタグIDを指定してください\n使い方: worklog new <プロジェクト名> <タグID> [HH:MM]")
 	} else {
 		// 対話モード
-		// UIインスタンスを作成
 		promptUI := ui.NewPromptUI()
 
-		// プロジェクト名を入力
 		projectName, err = promptUI.InputProject()
 		if err != nil {
 			return fmt.Errorf("プロジェクト名の入力に失敗: %w", err)
 		}
 
-		// タグを選択
 		tags, err := manager.GetTags()
 		if err != nil {
 			return fmt.Errorf("タグの読み込みに失敗: %w", err)
@@ -43,24 +42,19 @@ func handleNew(manager project.ProjectManager) error {
 		if err != nil {
 			return fmt.Errorf("タグの選択に失敗: %w", err)
 		}
-
-		// 選択されたタグ名を取得
 		tagName = resolveTagName(tags, tagID)
 
-		// 対話モードで時刻を入力
 		timeStr, err := promptUI.InputTime("開始時刻")
 		if err != nil {
 			return fmt.Errorf("時刻の入力に失敗: %w", err)
 		}
 
-		// 現在の稼働状況を取得（停止メッセージ表示用）
 		status, err := manager.Status()
 		if err != nil {
 			return err
 		}
 
 		var startTime time.Time
-		// 時刻が入力された場合
 		if timeStr != "" {
 			timestamp, err := parseTimeArg(timeStr)
 			if err != nil {
@@ -71,14 +65,12 @@ func handleNew(manager project.ProjectManager) error {
 				return err
 			}
 		} else {
-			// 空欄の場合は現在時刻を使用
 			startTime = time.Now()
 			if err := manager.NewAt(projectName, tagID, startTime); err != nil {
 				return err
 			}
 		}
 
-		// 統一された出力（switchと一貫性）
 		tagDisplay := formatTagDisplay(tagID, tagName)
 		var oldProject string
 		var oldStartTime time.Time
@@ -87,36 +79,55 @@ func handleNew(manager project.ProjectManager) error {
 			oldStartTime = status.StartTime
 		}
 		output := ui.RenderSwitchMessage(oldProject, oldStartTime, startTime, projectName, tagDisplay)
-		fmt.Print(output)
+		fmt.Fprint(opts.writer(), output)
 		return nil
 	}
 
 	// コマンドライン引数での実行
-	// 現在稼働中のプロジェクトを取得（停止メッセージ表示用）
+	if err := storage.ValidateProjectName(projectName); err != nil {
+		return jsonError(opts, "INVALID_PROJECT_NAME", err.Error())
+	}
+	if _, err := strconv.Atoi(tagID); err != nil {
+		return jsonError(opts, "INVALID_TAG_ID", fmt.Sprintf("タグIDは数値で指定してください: %s", tagID))
+	}
+
 	status, err := manager.Status()
 	if err != nil {
-		return err
+		return jsonError(opts, "INTERNAL_ERROR", err.Error())
 	}
 
 	var startTime time.Time
-	// 時刻指定があるかチェック（5番目の引数）
-	if len(os.Args) >= 5 && len(os.Args[4]) > 0 {
-		timestamp, err := parseTimeArg(os.Args[4])
+	if len(opts.Args) >= 4 && len(opts.Args[3]) > 0 {
+		timestamp, err := parseTimeArg(opts.Args[3])
 		if err != nil {
-			return fmt.Errorf("時刻の形式が不正です: %w", err)
+			return jsonError(opts, "INVALID_TIME_FORMAT", fmt.Sprintf("時刻の形式が不正です: %v", err))
 		}
 		startTime = timestamp
 		if err := manager.NewAt(projectName, tagID, timestamp); err != nil {
-			return err
+			return jsonError(opts, "INTERNAL_ERROR", err.Error())
 		}
 	} else {
 		startTime = time.Now()
 		if err := manager.NewAt(projectName, tagID, startTime); err != nil {
-			return err
+			return jsonError(opts, "INTERNAL_ERROR", err.Error())
 		}
 	}
 
-	// 統一された出力（switchと一貫性）
+	if opts.JSONMode {
+		out := actionJSON{
+			Action:    "new",
+			Project:   projectName,
+			TagID:     tagID,
+			TagName:   tagName,
+			StartTime: startTime.Format(time.RFC3339),
+		}
+		if status != nil {
+			out.PrevProject = status.Project
+		}
+		writeJSON(opts.writer(), out)
+		return nil
+	}
+
 	tagDisplay := formatTagDisplay(tagID, tagName)
 	var oldProject string
 	var oldStartTime time.Time
@@ -125,6 +136,6 @@ func handleNew(manager project.ProjectManager) error {
 		oldStartTime = status.StartTime
 	}
 	output := ui.RenderSwitchMessage(oldProject, oldStartTime, startTime, projectName, tagDisplay)
-	fmt.Print(output)
+	fmt.Fprint(opts.writer(), output)
 	return nil
 }

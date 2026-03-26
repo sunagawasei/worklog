@@ -287,6 +287,9 @@ func (m *projectManager) ListOnDate(date time.Time) ([]domain.ProjectSummary, er
 
 // NewAt は指定時刻で新規プロジェクトを開始する
 func (m *projectManager) NewAt(project, tag string, timestamp time.Time) error {
+	if err := storage.ValidateProjectName(project); err != nil {
+		return err
+	}
 	// 既存のプロジェクトが稼働中か確認
 	current, err := m.currentStorage.Read()
 	if err == nil && current != "" {
@@ -322,6 +325,9 @@ func (m *projectManager) NewAt(project, tag string, timestamp time.Time) error {
 
 // SwitchAt は指定時刻でプロジェクトを切り替える
 func (m *projectManager) SwitchAt(project, tag string, timestamp time.Time) error {
+	if err := storage.ValidateProjectName(project); err != nil {
+		return err
+	}
 	// 既存のプロジェクト情報を取得
 	current, err := m.currentStorage.Read()
 	if err == nil && current != "" {
@@ -451,6 +457,9 @@ func (m *projectManager) GetTags() ([]domain.Tag, error) {
 
 // AddTag は新しいタグを追加する
 func (m *projectManager) AddTag(name string) (domain.Tag, error) {
+	if err := storage.ValidateTagName(name); err != nil {
+		return domain.Tag{}, err
+	}
 	return m.tagStorage.Add(name)
 }
 

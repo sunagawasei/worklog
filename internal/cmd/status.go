@@ -9,20 +9,33 @@ import (
 )
 
 // handleStatus は現在の稼働状況を表示する
-func handleStatus(manager project.ProjectManager) error {
+func handleStatus(manager project.ProjectManager, opts ExecOptions) error {
 	status, err := manager.Status()
 	if err != nil {
-		return err
+		return jsonError(opts, "INTERNAL_ERROR", err.Error())
 	}
 
-	// 本日の全プロジェクトの作業時間を取得
 	summaries, err := manager.List()
 	if err != nil {
-		return err
+		return jsonError(opts, "INTERNAL_ERROR", err.Error())
 	}
 
-	// ダッシュボードを表示
+	if opts.JSONMode {
+		out := summaryStatusJSON{
+			Summaries: make([]listItemJSON, 0, len(summaries)),
+		}
+		if status != nil {
+			s := toStatusJSON(status)
+			out.Status = &s
+		}
+		for _, s := range summaries {
+			out.Summaries = append(out.Summaries, toListItemJSON(s))
+		}
+		writeJSON(opts.writer(), out)
+		return nil
+	}
+
 	output := ui.RenderDashboard(status, summaries, time.Now())
-	fmt.Print(output)
+	fmt.Fprint(opts.writer(), output)
 	return nil
 }

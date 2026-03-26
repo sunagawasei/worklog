@@ -2,61 +2,56 @@ package cmd
 
 import (
 	"fmt"
-	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/mattn/go-runewidth"
 	"worklog/internal/project"
+	"worklog/internal/storage"
 	"worklog/internal/ui"
 )
 
 // handleSwitch はプロジェクトを切り替える
-func handleSwitch(manager project.ProjectManager) error {
+func handleSwitch(manager project.ProjectManager, opts ExecOptions) error {
 	var newProject, newTag, newTagName string
 
-	// 引数が十分にある場合は従来の動作
-	if len(os.Args) >= 4 {
-		newProject = os.Args[2]
-		newTag = os.Args[3]
-		// タグ名を取得
+	// opts.Args: [0]="switch", [1]=プロジェクト名, [2]=タグID, [3]=時刻(任意)
+	if len(opts.Args) >= 3 {
+		newProject = opts.Args[1]
+		newTag = opts.Args[2]
 		if tags, err := manager.GetTags(); err == nil {
 			newTagName = resolveTagName(tags, newTag)
 		}
+	} else if opts.NoInteractive {
+		return jsonError(opts, "MISSING_ARGUMENTS", "プロジェクト名とタグIDを指定してください\n使い方: worklog switch <プロジェクト名> <タグID> [HH:MM]")
 	} else {
 		// 対話モード：過去2週間のプロジェクトリストから選択
-		// 過去2週間のプロジェクト一覧を取得
 		summaries, err := manager.ListRecent(14)
 		if err != nil {
 			return fmt.Errorf("プロジェクト一覧の取得に失敗: %w", err)
 		}
 
 		if len(summaries) == 0 {
-			fmt.Fprint(os.Stderr, ui.RenderError("過去2週間に作業したプロジェクトがありません"))
+			fmt.Fprint(opts.writer(), ui.RenderError("過去2週間に作業したプロジェクトがありません"))
 			return nil
 		}
 
-		// 現在稼働中のプロジェクトを取得
 		status, err := manager.Status()
 		if err != nil {
 			return err
 		}
 
-		// UIインスタンスを作成
 		promptUI := ui.NewPromptUI()
 
-		// dateGroup は同じ日付ラベルのプロジェクト群
 		type dateGroup struct {
 			label    string
 			projects []ui.ProjectDisplay
 		}
-
-		// formatDateLabel の結果ごとにグループ化（順序保持）
 		var groups []dateGroup
 		groupIndex := map[string]int{}
 
 		for _, summary := range summaries {
-			// 現在稼働中のプロジェクトは除外
 			if status != nil && summary.Project == status.Project {
 				continue
 			}
@@ -81,7 +76,6 @@ func handleSwitch(manager project.ProjectManager) error {
 			}
 		}
 
-		// 各グループの先頭項目にDateLabelプレフィックスを設定（固定幅: ui.DatePrefixWidth）
 		var selectableProjects []ui.ProjectDisplay
 		for _, g := range groups {
 			for i, pd := range g.projects {
@@ -96,11 +90,10 @@ func handleSwitch(manager project.ProjectManager) error {
 		}
 
 		if len(selectableProjects) == 0 {
-			fmt.Fprint(os.Stderr, ui.RenderError("切り替え可能なプロジェクトがありません"))
+			fmt.Fprint(opts.writer(), ui.RenderError("切り替え可能なプロジェクトがありません"))
 			return nil
 		}
 
-		// プロジェクトを選択
 		selected, err := promptUI.SelectProjectFromList(selectableProjects)
 		if err != nil {
 			return fmt.Errorf("プロジェクトの選択に失敗: %w", err)
@@ -110,13 +103,11 @@ func handleSwitch(manager project.ProjectManager) error {
 		newTag = selected.Tag
 		newTagName = selected.TagName
 
-		// 対話モードで時刻を入力
 		timeStr, err := promptUI.InputTime("切替時刻")
 		if err != nil {
 			return fmt.Errorf("時刻の入力に失敗: %w", err)
 		}
 
-		// 切り替え前の状態を保存
 		var oldProject string
 		var oldStartTime time.Time
 		if status != nil {
@@ -125,7 +116,6 @@ func handleSwitch(manager project.ProjectManager) error {
 		}
 
 		var switchTime time.Time
-		// 時刻が入力された場合
 		if timeStr != "" {
 			timestamp, err := parseTimeArg(timeStr)
 			if err != nil {
@@ -136,28 +126,31 @@ func handleSwitch(manager project.ProjectManager) error {
 				return err
 			}
 		} else {
-			// 空欄の場合は現在時刻を使用
 			switchTime = time.Now()
 			if err := manager.SwitchAt(newProject, newTag, switchTime); err != nil {
 				return err
 			}
 		}
 
-		// 統一された出力
 		tagDisplay := formatTagDisplay(newTag, newTagName)
 		output := ui.RenderSwitchMessage(oldProject, oldStartTime, switchTime, newProject, tagDisplay)
-		fmt.Print(output)
+		fmt.Fprint(opts.writer(), output)
 		return nil
 	}
 
 	// コマンドライン引数での実行
-	// 現在稼働中のプロジェクトを取得（停止メッセージ表示用）
-	status, err := manager.Status()
-	if err != nil {
-		return err
+	if err := storage.ValidateProjectName(newProject); err != nil {
+		return jsonError(opts, "INVALID_PROJECT_NAME", err.Error())
+	}
+	if _, err := strconv.Atoi(newTag); err != nil {
+		return jsonError(opts, "INVALID_TAG_ID", fmt.Sprintf("タグIDは数値で指定してください: %s", newTag))
 	}
 
-	// 切り替え前の状態を保存
+	status, err := manager.Status()
+	if err != nil {
+		return jsonError(opts, "INTERNAL_ERROR", err.Error())
+	}
+
 	var oldProject string
 	var oldStartTime time.Time
 	if status != nil {
@@ -166,26 +159,39 @@ func handleSwitch(manager project.ProjectManager) error {
 	}
 
 	var switchTime time.Time
-	// 時刻指定があるかチェック（5番目の引数）
-	if len(os.Args) >= 5 && len(os.Args[4]) > 0 {
-		timestamp, err := parseTimeArg(os.Args[4])
+	if len(opts.Args) >= 4 && len(opts.Args[3]) > 0 {
+		timestamp, err := parseTimeArg(opts.Args[3])
 		if err != nil {
-			return fmt.Errorf("時刻の形式が不正です: %w", err)
+			return jsonError(opts, "INVALID_TIME_FORMAT", fmt.Sprintf("時刻の形式が不正です: %v", err))
 		}
 		switchTime = timestamp
 		if err := manager.SwitchAt(newProject, newTag, timestamp); err != nil {
-			return err
+			return jsonError(opts, "INTERNAL_ERROR", err.Error())
 		}
 	} else {
 		switchTime = time.Now()
 		if err := manager.SwitchAt(newProject, newTag, switchTime); err != nil {
-			return err
+			return jsonError(opts, "INTERNAL_ERROR", err.Error())
 		}
 	}
 
-	// 統一された出力
+	if opts.JSONMode {
+		out := actionJSON{
+			Action:    "switch",
+			Project:   newProject,
+			TagID:     newTag,
+			TagName:   newTagName,
+			StartTime: switchTime.Format(time.RFC3339),
+		}
+		if oldProject != "" {
+			out.PrevProject = oldProject
+		}
+		writeJSON(opts.writer(), out)
+		return nil
+	}
+
 	tagDisplay := formatTagDisplay(newTag, newTagName)
 	output := ui.RenderSwitchMessage(oldProject, oldStartTime, switchTime, newProject, tagDisplay)
-	fmt.Print(output)
+	fmt.Fprint(opts.writer(), output)
 	return nil
 }
