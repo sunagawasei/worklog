@@ -69,8 +69,8 @@ func renderListWithWidth(summaries []domain.ProjectSummary, now time.Time, width
 		// プロジェクト名行（ドットリーダーで右揃え時間）
 		var leftPart string
 		if summary.TagName != "" {
-			leftPart = fmt.Sprintf("%s %s %s %s",
-				LineV, summary.Project, Bullet, summary.TagName)
+			leftPart = fmt.Sprintf("%s %s %s",
+				LineV, summary.Project, FormatTagLabel(summary.TagName))
 		} else {
 			leftPart = fmt.Sprintf("%s %s", LineV, summary.Project)
 		}

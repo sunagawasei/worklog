@@ -60,9 +60,9 @@ func truncateProjectName(project string, termWidth int, tagWidth int) string {
 	return runewidth.Truncate(project, maxProjectWidth, "…")
 }
 
-// truncateProjectWithTag はタグ名を考慮してプロジェクト名を切り詰める
-func truncateProjectWithTag(project, tagName string) string {
-	tagWidth := runewidth.StringWidth(tagName)
+// truncateProjectWithTag はタグラベル（#プレフィックス含む）を考慮してプロジェクト名を切り詰める
+func truncateProjectWithTag(project, tagLabel string) string {
+	tagWidth := runewidth.StringWidth(tagLabel)
 	return truncateProjectName(project, GetTerminalWidth(), tagWidth)
 }
 
@@ -71,11 +71,12 @@ func truncateProjectWithTag(project, tagName string) string {
 func buildProjectLabel(pd ProjectDisplay) string {
 	var sb strings.Builder
 	sb.WriteString(pd.DateLabel)
-	name := truncateProjectWithTag(pd.Project, pd.TagName)
+	tagLabel := FormatTagLabel(pd.TagName)
+	name := truncateProjectWithTag(pd.Project, tagLabel)
 	sb.WriteString(name)
-	if pd.TagName != "" {
+	if tagLabel != "" {
 		sb.WriteString("  ")
-		sb.WriteString(pd.TagName)
+		sb.WriteString(tagLabel)
 	}
 	sb.WriteString("  ")
 	sb.WriteString(pd.Time)

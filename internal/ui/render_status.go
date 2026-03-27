@@ -55,7 +55,7 @@ func dashboardData(status *domain.ProjectStatus, summaries []domain.ProjectSumma
 			fmt.Sprintf("%s • %s", startStr, durationStr),
 		}
 		if status.TagName != "" {
-			statusLines = append(statusLines, status.TagName)
+			statusLines = append(statusLines, FormatTagLabel(status.TagName))
 		}
 		if totalTime > 0 {
 			progressBar := renderTimeProgressBarFit(totalTime, 8*time.Hour, statusCol)

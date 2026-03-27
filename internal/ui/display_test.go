@@ -54,9 +54,9 @@ func TestRenderList_SingleProject(t *testing.T) {
 		t.Errorf("期待: '2h 30m'を含む, 実際: %q", result)
 	}
 
-	// タグ名が含まれているか
-	if !strings.Contains(result, "Development") {
-		t.Errorf("期待: 'Development'を含む, 実際: %q", result)
+	// タグ名が#プレフィックス付きで含まれているか
+	if !strings.Contains(result, "[#Development]") {
+		t.Errorf("期待: '[#Development]'を含む, 実際: %q", result)
 	}
 
 	// 合計時間が含まれているか
@@ -99,13 +99,13 @@ func TestRenderList_MultipleProjects(t *testing.T) {
 		t.Errorf("期待: 'ProjectB'を含む, 実際: %q", result)
 	}
 
-	// タグ名が含まれているか
-	if !strings.Contains(result, "Development") {
-		t.Errorf("期待: 'Development'を含む, 実際: %q", result)
+	// タグ名が#プレフィックス付きで含まれているか
+	if !strings.Contains(result, "[#Development]") {
+		t.Errorf("期待: '[#Development]'を含む, 実際: %q", result)
 	}
 
-	if !strings.Contains(result, "Meeting") {
-		t.Errorf("期待: 'Meeting'を含む, 実際: %q", result)
+	if !strings.Contains(result, "[#Meeting]") {
+		t.Errorf("期待: '[#Meeting]'を含む, 実際: %q", result)
 	}
 
 	// 両方の稼働時間が含まれているか
@@ -176,13 +176,13 @@ func TestRenderList_WithTimeRanges(t *testing.T) {
 		t.Errorf("期待: '2h 30m'を含む, 実際: %q", result)
 	}
 
-	// タグ名が含まれているか
-	if !strings.Contains(result, "Development") {
-		t.Errorf("期待: 'Development'を含む, 実際: %q", result)
+	// タグ名が#プレフィックス付きで含まれているか
+	if !strings.Contains(result, "[#Development]") {
+		t.Errorf("期待: '[#Development]'を含む, 実際: %q", result)
 	}
 
-	if !strings.Contains(result, "Meeting") {
-		t.Errorf("期待: 'Meeting'を含む, 実際: %q", result)
+	if !strings.Contains(result, "[#Meeting]") {
+		t.Errorf("期待: '[#Meeting]'を含む, 実際: %q", result)
 	}
 
 	// 時間範囲が含まれているか
@@ -667,9 +667,9 @@ func TestRenderDashboard_Running(t *testing.T) {
 		t.Errorf("期待: '1h 30m / 4h 15m'（現在セッション時間 / 累計時間）を含む, 実際: %q", result)
 	}
 
-	// Status部分：タグ名
-	if !strings.Contains(result, "Development") {
-		t.Errorf("期待: 'Development'を含む, 実際: %q", result)
+	// Status部分：タグ名（#プレフィックス付き）
+	if !strings.Contains(result, "[#Development]") {
+		t.Errorf("期待: '[#Development]'を含む, 実際: %q", result)
 	}
 
 	// Summary部分：Today（合計時間）
@@ -1140,6 +1140,29 @@ func TestProgressBarFit(t *testing.T) {
 		result := renderTimeProgressBarFit(3*time.Hour, 8*time.Hour, 16)
 		if result == "" {
 			t.Error("空文字列が返された")
+		}
+	})
+}
+
+func TestFormatTagLabel(t *testing.T) {
+	t.Run("空文字は空文字を返す", func(t *testing.T) {
+		result := FormatTagLabel("")
+		if result != "" {
+			t.Errorf("期待値: '', 実際: '%s'", result)
+		}
+	})
+
+	t.Run("ASCIIタグに[#...]形式を適用する", func(t *testing.T) {
+		result := FormatTagLabel("wasabi")
+		if result != "[#wasabi]" {
+			t.Errorf("期待値: '[#wasabi]', 実際: '%s'", result)
+		}
+	})
+
+	t.Run("日本語タグに[#...]形式を適用する", func(t *testing.T) {
+		result := FormatTagLabel("開発")
+		if result != "[#開発]" {
+			t.Errorf("期待値: '[#開発]', 実際: '%s'", result)
 		}
 	})
 }

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"worklog/internal/domain"
 )
@@ -241,6 +242,54 @@ func TestBuildProjectLabel_WithPrefix(t *testing.T) {
 		label := buildProjectLabel(pd)
 		if label[:13] != "             " {
 			t.Errorf("空DateLabelが空白になっていません: '%s'", label[:13])
+		}
+	})
+}
+
+func TestBuildProjectLabel_TagFormat(t *testing.T) {
+	t.Run("タグ名に#プレフィックスが付く", func(t *testing.T) {
+		pd := ProjectDisplay{
+			Project:   "質問対応",
+			TagName:   "wasabi",
+			Time:      "1h 18m",
+			Status:    "▫ paused",
+			DateLabel: "[Today]      ",
+		}
+		label := buildProjectLabel(pd)
+		if !strings.Contains(label, "[#wasabi]") {
+			t.Errorf("[#wasabi] が含まれていません: '%s'", label)
+		}
+		// 生の "wasabi" が単独で含まれないこと
+		if strings.Contains(label, "  wasabi") {
+			t.Errorf("[#...] なしの wasabi が含まれています: '%s'", label)
+		}
+	})
+
+	t.Run("日本語タグ名に#プレフィックスが付く", func(t *testing.T) {
+		pd := ProjectDisplay{
+			Project:   "TestProject",
+			TagName:   "開発",
+			Time:      "1h 30m",
+			Status:    "▫ paused",
+			DateLabel: "[Today]      ",
+		}
+		label := buildProjectLabel(pd)
+		if !strings.Contains(label, "[#開発]") {
+			t.Errorf("[#開発] が含まれていません: '%s'", label)
+		}
+	})
+
+	t.Run("タグなしの場合は#が付かない", func(t *testing.T) {
+		pd := ProjectDisplay{
+			Project:   "TestProject",
+			TagName:   "",
+			Time:      "1h 30m",
+			Status:    "▫ paused",
+			DateLabel: "[Today]      ",
+		}
+		label := buildProjectLabel(pd)
+		if strings.Contains(label, "#") {
+			t.Errorf("タグなしなのに # が含まれています: '%s'", label)
 		}
 	})
 }

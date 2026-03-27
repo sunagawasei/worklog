@@ -73,6 +73,15 @@ const (
 	Bullet = "•"
 )
 
+// FormatTagLabel はタグ名を表示用にフォーマットする（例: "wasabi" → "[#wasabi]"）
+// 空文字の場合は空文字を返す
+func FormatTagLabel(tagName string) string {
+	if tagName == "" {
+		return ""
+	}
+	return "[#" + tagName + "]"
+}
+
 // FormatDuration は時間を "Xh XXm" 形式にフォーマットする
 func FormatDuration(d time.Duration) string {
 	hours := int(d.Hours())
