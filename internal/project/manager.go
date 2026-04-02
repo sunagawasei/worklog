@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -290,6 +291,9 @@ func (m *projectManager) NewAt(project, tag string, timestamp time.Time) error {
 	if err := storage.ValidateProjectName(project); err != nil {
 		return err
 	}
+	if _, err := strconv.Atoi(tag); err != nil {
+		return fmt.Errorf("タグIDは数値で指定してください: %s", tag)
+	}
 	// 既存のプロジェクトが稼働中か確認
 	current, err := m.currentStorage.Read()
 	if err == nil && current != "" {
@@ -327,6 +331,9 @@ func (m *projectManager) NewAt(project, tag string, timestamp time.Time) error {
 func (m *projectManager) SwitchAt(project, tag string, timestamp time.Time) error {
 	if err := storage.ValidateProjectName(project); err != nil {
 		return err
+	}
+	if _, err := strconv.Atoi(tag); err != nil {
+		return fmt.Errorf("タグIDは数値で指定してください: %s", tag)
 	}
 	// 既存のプロジェクト情報を取得
 	current, err := m.currentStorage.Read()

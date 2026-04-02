@@ -159,7 +159,7 @@ func TestProjectManager_New(t *testing.T) {
 	manager := NewProjectManager(currentStorage, logStorage, tagStorage)
 
 	// NewAtメソッドのテスト
-	err := manager.NewAt("ProjectA", "Development", time.Now())
+	err := manager.NewAt("ProjectA", "1", time.Now())
 	if err != nil {
 		t.Errorf("NewAt()でエラーが発生: %v", err)
 	}
@@ -168,8 +168,8 @@ func TestProjectManager_New(t *testing.T) {
 	if currentStorage.writeProject != "ProjectA" {
 		t.Errorf("プロジェクト名が異なる: got %s, want ProjectA", currentStorage.writeProject)
 	}
-	if currentStorage.writeTag != "Development" {
-		t.Errorf("タグIDが異なる: got %s, want Development", currentStorage.writeTag)
+	if currentStorage.writeTag != "1" {
+		t.Errorf("タグIDが異なる: got %s, want 1", currentStorage.writeTag)
 	}
 
 	// LogStorageへの記録を確認
@@ -183,9 +183,33 @@ func TestProjectManager_New(t *testing.T) {
 		if call.action != "start" {
 			t.Errorf("ログのアクションが異なる: got %s, want start", call.action)
 		}
-		if call.tag != "Development" {
-			t.Errorf("ログのタグIDが異なる: got %s, want Development", call.tag)
+		if call.tag != "1" {
+			t.Errorf("ログのタグIDが異なる: got %s, want 1", call.tag)
 		}
+	}
+}
+
+func TestNewAt_RejectsNonNumericTag(t *testing.T) {
+	currentStorage := &mockCurrentStorage{}
+	logStorage := &mockLogStorage{}
+	tagStorage := &mockTagStorage{}
+	manager := NewProjectManager(currentStorage, logStorage, tagStorage)
+
+	err := manager.NewAt("ProjectA", "HW", time.Now())
+	if err == nil {
+		t.Error("タグ名テキストを渡したときにエラーが返るべき")
+	}
+}
+
+func TestSwitchAt_RejectsNonNumericTag(t *testing.T) {
+	currentStorage := &mockCurrentStorage{}
+	logStorage := &mockLogStorage{}
+	tagStorage := &mockTagStorage{}
+	manager := NewProjectManager(currentStorage, logStorage, tagStorage)
+
+	err := manager.SwitchAt("ProjectA", "HW", time.Now())
+	if err == nil {
+		t.Error("タグ名テキストを渡したときにエラーが返るべき")
 	}
 }
 
@@ -202,7 +226,7 @@ func TestProjectManager_New_WithAutoStop(t *testing.T) {
 		manager := NewProjectManager(currentStorage, logStorage, tagStorage)
 
 		// NewAtメソッドのテスト（自動停止を期待）
-		err := manager.NewAt("ProjectA", "Development", time.Now())
+		err := manager.NewAt("ProjectA", "5", time.Now())
 		if err != nil {
 			t.Errorf("NewAt()でエラーが発生しました: %v", err)
 			return
@@ -232,8 +256,8 @@ func TestProjectManager_New_WithAutoStop(t *testing.T) {
 			if startCall.action != "start" {
 				t.Errorf("startログのアクションが異なる: got %s, want start", startCall.action)
 			}
-			if startCall.tag != "Development" {
-				t.Errorf("startログのタグIDが異なる: got %s, want Development", startCall.tag)
+			if startCall.tag != "5" {
+				t.Errorf("startログのタグIDが異なる: got %s, want 5", startCall.tag)
 			}
 		}
 
@@ -241,8 +265,8 @@ func TestProjectManager_New_WithAutoStop(t *testing.T) {
 		if currentStorage.writeProject != "ProjectA" {
 			t.Errorf("プロジェクト名が異なる: got %s, want ProjectA", currentStorage.writeProject)
 		}
-		if currentStorage.writeTag != "Development" {
-			t.Errorf("タグIDが異なる: got %s, want Development", currentStorage.writeTag)
+		if currentStorage.writeTag != "5" {
+			t.Errorf("タグIDが異なる: got %s, want 5", currentStorage.writeTag)
 		}
 	})
 }
@@ -259,7 +283,7 @@ func TestProjectManager_Switch(t *testing.T) {
 	manager := NewProjectManager(currentStorage, logStorage, tagStorage)
 
 	// SwitchAtメソッドのテスト
-	err := manager.SwitchAt("ProjectB", "MTG", time.Now())
+	err := manager.SwitchAt("ProjectB", "2", time.Now())
 	if err != nil {
 		t.Errorf("SwitchAt()でエラーが発生: %v", err)
 	}
@@ -288,8 +312,8 @@ func TestProjectManager_Switch(t *testing.T) {
 		if startCall.action != "start" {
 			t.Errorf("startログのアクションが異なる: got %s, want start", startCall.action)
 		}
-		if startCall.tag != "MTG" {
-			t.Errorf("startログのタグIDが異なる: got %s, want MTG", startCall.tag)
+		if startCall.tag != "2" {
+			t.Errorf("startログのタグIDが異なる: got %s, want 2", startCall.tag)
 		}
 	}
 
@@ -297,8 +321,8 @@ func TestProjectManager_Switch(t *testing.T) {
 	if currentStorage.writeProject != "ProjectB" {
 		t.Errorf("プロジェクト名が異なる: got %s, want ProjectB", currentStorage.writeProject)
 	}
-	if currentStorage.writeTag != "MTG" {
-		t.Errorf("タグIDが異なる: got %s, want MTG", currentStorage.writeTag)
+	if currentStorage.writeTag != "2" {
+		t.Errorf("タグIDが異なる: got %s, want 2", currentStorage.writeTag)
 	}
 }
 
@@ -948,7 +972,7 @@ func TestProjectManager_NewAt(t *testing.T) {
 		manager := NewProjectManager(currentStorage, logStorage, tagStorage)
 
 		// NewAtメソッドのテスト
-		err := manager.NewAt("ProjectA", "Development", specifiedTime)
+		err := manager.NewAt("ProjectA", "5", specifiedTime)
 		if err != nil {
 			t.Errorf("NewAt()でエラーが発生: %v", err)
 		}
@@ -957,8 +981,8 @@ func TestProjectManager_NewAt(t *testing.T) {
 		if currentStorage.writeProject != "ProjectA" {
 			t.Errorf("プロジェクト名が異なる: got %s, want ProjectA", currentStorage.writeProject)
 		}
-		if currentStorage.writeTag != "Development" {
-			t.Errorf("タグが異なる: got %s, want Development", currentStorage.writeTag)
+		if currentStorage.writeTag != "5" {
+			t.Errorf("タグが異なる: got %s, want 5", currentStorage.writeTag)
 		}
 
 		// logStorageへの追記を確認
@@ -973,8 +997,8 @@ func TestProjectManager_NewAt(t *testing.T) {
 		if call.action != "start" {
 			t.Errorf("ログのアクションが異なる: got %s, want start", call.action)
 		}
-		if call.tag != "Development" {
-			t.Errorf("ログのタグが異なる: got %s, want Development", call.tag)
+		if call.tag != "5" {
+			t.Errorf("ログのタグが異なる: got %s, want 5", call.tag)
 		}
 		// 指定時刻が使用されていることを確認
 		if !call.timestamp.Equal(specifiedTime) {
@@ -997,7 +1021,7 @@ func TestProjectManager_NewAt(t *testing.T) {
 		manager := NewProjectManager(currentStorage, logStorage, tagStorage)
 
 		// NewAtメソッドのテスト
-		err := manager.NewAt("NewProject", "NEW", specifiedTime)
+		err := manager.NewAt("NewProject", "3", specifiedTime)
 		if err != nil {
 			t.Errorf("NewAt()でエラーが発生: %v", err)
 		}
@@ -1044,7 +1068,7 @@ func TestProjectManager_SwitchAt(t *testing.T) {
 		manager := NewProjectManager(currentStorage, logStorage, tagStorage)
 
 		// SwitchAtメソッドのテスト
-		err := manager.SwitchAt("NewProject", "NEW", specifiedTime)
+		err := manager.SwitchAt("NewProject", "3", specifiedTime)
 		if err != nil {
 			t.Errorf("SwitchAt()でエラーが発生: %v", err)
 		}
@@ -1082,7 +1106,7 @@ func TestProjectManager_SwitchAt(t *testing.T) {
 		manager := NewProjectManager(currentStorage, logStorage, tagStorage)
 
 		// SwitchAtメソッドのテスト（稼働中なしから開始）
-		err := manager.SwitchAt("ProjectA", "TAG1", specifiedTime)
+		err := manager.SwitchAt("ProjectA", "1", specifiedTime)
 		if err != nil {
 			t.Errorf("SwitchAt()でエラーが発生: %v", err)
 		}
@@ -1091,8 +1115,8 @@ func TestProjectManager_SwitchAt(t *testing.T) {
 		if currentStorage.writeProject != "ProjectA" {
 			t.Errorf("プロジェクト名が異なる: got %s, want ProjectA", currentStorage.writeProject)
 		}
-		if currentStorage.writeTag != "TAG1" {
-			t.Errorf("タグが異なる: got %s, want TAG1", currentStorage.writeTag)
+		if currentStorage.writeTag != "1" {
+			t.Errorf("タグが異なる: got %s, want 1", currentStorage.writeTag)
 		}
 
 		// ログ追記が1回のみ（新規開始のみ）

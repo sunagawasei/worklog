@@ -102,6 +102,9 @@ func handleSwitch(manager project.ProjectManager, opts ExecOptions) error {
 		newProject = selected.Project
 		newTag = selected.Tag
 		newTagName = selected.TagName
+		if _, err := strconv.Atoi(newTag); err != nil {
+			return fmt.Errorf("選択されたプロジェクトのタグIDが不正です（数値IDではありません: %s）。ログファイルを確認してください", newTag)
+		}
 
 		timeStr, err := promptUI.InputTime("切替時刻")
 		if err != nil {
