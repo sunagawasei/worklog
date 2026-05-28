@@ -21,15 +21,15 @@ type statusJSON struct {
 	Project            string  `json:"project"`
 	TagID              string  `json:"tag_id"`
 	TagName            string  `json:"tag_name"`
-	StartTime          string  `json:"start_time"`          // RFC3339
+	StartTime          string  `json:"start_time"`              // RFC3339
 	CurrentSessionSecs float64 `json:"current_session_seconds"` // ナノ秒ではなく秒数
 	TotalSecs          float64 `json:"total_seconds"`
 }
 
 // summaryStatusJSON は status と共に返す本日の集計情報
 type summaryStatusJSON struct {
-	Status    *statusJSON    `json:"status"`     // nil = 稼働中プロジェクトなし
-	Summaries []listItemJSON `json:"summaries"`  // 本日の全プロジェクト
+	Status    *statusJSON    `json:"status"`    // nil = 稼働中プロジェクトなし
+	Summaries []listItemJSON `json:"summaries"` // 本日の全プロジェクト
 }
 
 func toStatusJSON(status *domain.ProjectStatus) statusJSON {
@@ -68,8 +68,8 @@ func toListItemJSON(s domain.ProjectSummary) listItemJSON {
 
 // timeRangeJSON はタイムライン用の作業時間範囲
 type timeRangeJSON struct {
-	Start   string  `json:"start"`            // RFC3339
-	End     string  `json:"end,omitempty"`    // RFC3339（セッション継続中は空）
+	Start   string  `json:"start"`         // RFC3339
+	End     string  `json:"end,omitempty"` // RFC3339（セッション継続中は空）
 	DurSecs float64 `json:"duration_seconds"`
 }
 

@@ -106,7 +106,8 @@ func handleSwitch(manager project.ProjectManager, opts ExecOptions) error {
 			return fmt.Errorf("選択されたプロジェクトのタグIDが不正です（数値IDではありません: %s）。ログファイルを確認してください", newTag)
 		}
 
-		timeStr, err := promptUI.InputTime("切替時刻")
+		tagDisplay := formatTagDisplay(newTag, newTagName)
+		timeStr, err := promptUI.InputTime(fmt.Sprintf("切替時刻 [%s %s]", newProject, tagDisplay))
 		if err != nil {
 			return fmt.Errorf("時刻の入力に失敗: %w", err)
 		}
@@ -135,7 +136,6 @@ func handleSwitch(manager project.ProjectManager, opts ExecOptions) error {
 			}
 		}
 
-		tagDisplay := formatTagDisplay(newTag, newTagName)
 		output := ui.RenderSwitchMessage(oldProject, oldStartTime, switchTime, newProject, tagDisplay)
 		fmt.Fprint(opts.writer(), output)
 		return nil

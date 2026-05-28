@@ -21,16 +21,16 @@ const (
 
 // ProjectManager はプロジェクト管理のビジネスロジックを扱うインターフェース
 type ProjectManager interface {
-	NewAt(project, tag string, timestamp time.Time) error    // 指定時刻で新規プロジェクト開始
-	SwitchAt(project, tag string, timestamp time.Time) error // 指定時刻でプロジェクト切り替え
-	StopAt(timestamp time.Time) error                        // 指定時刻で停止
-	Status() (*domain.ProjectStatus, error)                  // 現在の状況
-	List() ([]domain.ProjectSummary, error)                  // 本日の一覧
+	NewAt(project, tag string, timestamp time.Time) error       // 指定時刻で新規プロジェクト開始
+	SwitchAt(project, tag string, timestamp time.Time) error    // 指定時刻でプロジェクト切り替え
+	StopAt(timestamp time.Time) error                           // 指定時刻で停止
+	Status() (*domain.ProjectStatus, error)                     // 現在の状況
+	List() ([]domain.ProjectSummary, error)                     // 本日の一覧
 	ListOnDate(date time.Time) ([]domain.ProjectSummary, error) // 指定日の一覧
-	ListRecent(days int) ([]domain.ProjectSummary, error)    // 過去N日間の一覧
-	GetTags() ([]domain.Tag, error)                          // タグ一覧を取得
-	AddTag(name string) (domain.Tag, error)                  // タグを追加
-	DeleteTag(id int) error                                   // タグを削除
+	ListRecent(days int) ([]domain.ProjectSummary, error)       // 過去N日間の一覧
+	GetTags() ([]domain.Tag, error)                             // タグ一覧を取得
+	AddTag(name string) (domain.Tag, error)                     // タグを追加
+	DeleteTag(id int) error                                     // タグを削除
 }
 
 // projectManager はProjectManagerインターフェースの実装

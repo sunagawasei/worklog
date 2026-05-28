@@ -44,7 +44,8 @@ func handleNew(manager project.ProjectManager, opts ExecOptions) error {
 		}
 		tagName = resolveTagName(tags, tagID)
 
-		timeStr, err := promptUI.InputTime("開始時刻")
+		tagDisplay := formatTagDisplay(tagID, tagName)
+		timeStr, err := promptUI.InputTime(fmt.Sprintf("開始時刻 [%s %s]", projectName, tagDisplay))
 		if err != nil {
 			return fmt.Errorf("時刻の入力に失敗: %w", err)
 		}
@@ -71,7 +72,6 @@ func handleNew(manager project.ProjectManager, opts ExecOptions) error {
 			}
 		}
 
-		tagDisplay := formatTagDisplay(tagID, tagName)
 		var oldProject string
 		var oldStartTime time.Time
 		if status != nil {

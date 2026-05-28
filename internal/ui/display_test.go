@@ -8,7 +8,6 @@ import (
 	"worklog/internal/domain"
 )
 
-
 // TestRenderList_Empty はプロジェクトが空の場合の表示をテストする
 func TestRenderList_Empty(t *testing.T) {
 	summaries := []domain.ProjectSummary{}
