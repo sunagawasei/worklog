@@ -26,8 +26,8 @@ func handleSwitch(manager project.ProjectManager, opts ExecOptions) error {
 	} else if opts.NoInteractive {
 		return jsonError(opts, "MISSING_ARGUMENTS", "プロジェクト名とタグIDを指定してください\n使い方: worklog switch <プロジェクト名> <タグID> [HH:MM]")
 	} else {
-		// 対話モード：過去2週間のプロジェクトリストから選択
-		summaries, err := manager.ListRecent(14)
+		// 対話モード：過去2週間のプロジェクトリストから選択（[2 weeks ago]ラベルまで含む）
+		summaries, err := manager.ListRecent(15)
 		if err != nil {
 			return fmt.Errorf("プロジェクト一覧の取得に失敗: %w", err)
 		}
