@@ -38,7 +38,8 @@ func handleStop(manager project.ProjectManager, opts ExecOptions) error {
 	} else {
 		// 対話モード
 		promptUI := ui.NewPromptUI()
-		timeStr, err := promptUI.InputTime("停止時刻")
+		tagDisplay := formatTagDisplay(status.Tag, status.TagName)
+		timeStr, err := promptUI.InputTime(fmt.Sprintf("停止時刻 [%s %s]", status.Project, tagDisplay))
 		if err != nil {
 			return fmt.Errorf("時刻の入力に失敗: %w", err)
 		}
