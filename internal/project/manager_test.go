@@ -40,6 +40,7 @@ func (m *mockCurrentStorage) Clear() error {
 type mockLogStorage struct {
 	appendCalls         []appendCall
 	appendError         error
+	appendErrorAfter    int // > 0 の場合、最初のN回は成功してからエラーを返す
 	readResult          []storage.LogEntry
 	readError           error
 	readAllResult       map[string][]storage.LogEntry
@@ -64,7 +65,14 @@ func (m *mockLogStorage) Append(project, action, tag string, timestamp time.Time
 		tag:       tag,
 		timestamp: timestamp,
 	})
-	return m.appendError
+	if m.appendError != nil {
+		// appendErrorAfter == 0: 常にエラーを返す（後方互換）
+		// appendErrorAfter > 0: N回成功してからエラーを返す
+		if m.appendErrorAfter <= 0 || len(m.appendCalls) > m.appendErrorAfter {
+			return m.appendError
+		}
+	}
+	return nil
 }
 
 func (m *mockLogStorage) ReadToday(project string) ([]storage.LogEntry, error) {
@@ -1573,6 +1581,285 @@ func TestProjectManager_AddTag(t *testing.T) {
 		_, err := manager.AddTag("開発")
 		if err == nil {
 			t.Error("同名タグの追加でエラーが発生しなかった")
+		}
+	})
+}
+
+// TestCalculateSessions は calculateSessions ヘルパーの挙動を固定する
+func TestCalculateSessions(t *testing.T) {
+	base := time.Date(2025, 6, 1, 10, 0, 0, 0, time.Local)
+
+	t.Run("空エントリ → total=0, ranges=nil, openStart=nil", func(t *testing.T) {
+		total, ranges, openStart := calculateSessions(nil)
+		if total != 0 {
+			t.Errorf("total: got %v, want 0", total)
+		}
+		if ranges != nil {
+			t.Errorf("ranges: got %v, want nil", ranges)
+		}
+		if openStart != nil {
+			t.Errorf("openStart: got non-nil, want nil")
+		}
+	})
+
+	t.Run("stopのみ（start前のstop）→ スキップされて total=0", func(t *testing.T) {
+		entries := []domain.LogEntry{
+			{Timestamp: base, Action: "stop"},
+		}
+		total, ranges, openStart := calculateSessions(entries)
+		if total != 0 {
+			t.Errorf("total: got %v, want 0", total)
+		}
+		if ranges != nil {
+			t.Errorf("ranges: got %v, want nil", ranges)
+		}
+		if openStart != nil {
+			t.Errorf("openStart: got non-nil, want nil")
+		}
+	})
+
+	t.Run("正常 start→stop → duration計算・range1件", func(t *testing.T) {
+		stop := base.Add(90 * time.Minute)
+		entries := []domain.LogEntry{
+			{Timestamp: base, Action: "start"},
+			{Timestamp: stop, Action: "stop"},
+		}
+		total, ranges, openStart := calculateSessions(entries)
+		if total != 90*time.Minute {
+			t.Errorf("total: got %v, want 90m", total)
+		}
+		if len(ranges) != 1 {
+			t.Fatalf("ranges len: got %d, want 1", len(ranges))
+		}
+		if !ranges[0].Start.Equal(base) {
+			t.Errorf("range.Start: got %v, want %v", ranges[0].Start, base)
+		}
+		if !ranges[0].End.Equal(stop) {
+			t.Errorf("range.End: got %v, want %v", ranges[0].End, stop)
+		}
+		if ranges[0].Duration != 90*time.Minute {
+			t.Errorf("range.Duration: got %v, want 90m", ranges[0].Duration)
+		}
+		if openStart != nil {
+			t.Errorf("openStart: got %v, want nil", openStart)
+		}
+	})
+
+	t.Run("startのみ → openStart非nil・rangesなし・total=0", func(t *testing.T) {
+		entries := []domain.LogEntry{
+			{Timestamp: base, Action: "start"},
+		}
+		total, ranges, openStart := calculateSessions(entries)
+		if total != 0 {
+			t.Errorf("total: got %v, want 0", total)
+		}
+		if len(ranges) != 0 {
+			t.Errorf("ranges len: got %d, want 0", len(ranges))
+		}
+		if openStart == nil {
+			t.Fatal("openStart: got nil, want non-nil")
+		}
+		if !openStart.Equal(base) {
+			t.Errorf("openStart: got %v, want %v", *openStart, base)
+		}
+	})
+
+	t.Run("二重start: 後のstartで上書きされ最初のセッションが消失（既知の制約）", func(t *testing.T) {
+		// NOTE: [start@10:00, start@11:00, stop@12:00] の場合、openStart は 11:00 に
+		// 上書きされ、10:00 開始のセッションは黙って消失する。
+		// total = 1h（11:00〜12:00 のみ）。これは現状実装の制約として記録する。
+		// 修正候補: 二重 start をログ書き込み時にバリデートする、あるいは
+		// 既存 openStart があれば暗黙セッションとして確定させる、等を検討。
+		start1 := base                    // 10:00
+		start2 := base.Add(1 * time.Hour) // 11:00
+		stop := base.Add(2 * time.Hour)   // 12:00
+		entries := []domain.LogEntry{
+			{Timestamp: start1, Action: "start"},
+			{Timestamp: start2, Action: "start"},
+			{Timestamp: stop, Action: "stop"},
+		}
+		total, ranges, openStart := calculateSessions(entries)
+		// 現状挙動: 11:00〜12:00 の 1h のみカウント
+		if total != 1*time.Hour {
+			t.Errorf("total: got %v, want 1h (only second session counted; first session is silently lost)", total)
+		}
+		if len(ranges) != 1 {
+			t.Fatalf("ranges len: got %d, want 1", len(ranges))
+		}
+		if !ranges[0].Start.Equal(start2) {
+			t.Errorf("range.Start: got %v, want %v (expected second start)", ranges[0].Start, start2)
+		}
+		if openStart != nil {
+			t.Errorf("openStart: got non-nil, want nil")
+		}
+	})
+
+	t.Run("逆順（start 12:00, stop 11:00）→ 負のdurationをそのまま返す（現状挙動）", func(t *testing.T) {
+		// NOTE: 時刻逆順のログに対してバリデーションは行わず、
+		// 負の duration をそのまま計算して返す。
+		// 修正候補: 負の duration を 0 にクランプする、あるいはエラーとする等を検討。
+		start := base.Add(2 * time.Hour) // 12:00
+		stop := base.Add(1 * time.Hour)  // 11:00 (< start)
+		entries := []domain.LogEntry{
+			{Timestamp: start, Action: "start"},
+			{Timestamp: stop, Action: "stop"},
+		}
+		total, ranges, openStart := calculateSessions(entries)
+		if total >= 0 {
+			t.Errorf("total: got %v, want negative (reversed timestamps produce negative duration)", total)
+		}
+		if len(ranges) != 1 {
+			t.Fatalf("ranges len: got %d, want 1", len(ranges))
+		}
+		if ranges[0].Duration >= 0 {
+			t.Errorf("range.Duration: got %v, want negative", ranges[0].Duration)
+		}
+		if openStart != nil {
+			t.Errorf("openStart: got non-nil, want nil")
+		}
+	})
+}
+
+// TestNewAt_StorageFailure は NewAt のストレージ失敗時のロールバック挙動を固定する
+func TestNewAt_StorageFailure(t *testing.T) {
+	t.Run("Write成功後にAppend失敗 → Clearでロールバックされる", func(t *testing.T) {
+		// manager.go:320-325: Append失敗時は currentStorage.Clear() でロールバック
+		currentStorage := &mockCurrentStorage{}
+		logStorage := &mockLogStorage{
+			appendError: errors.New("disk full"),
+		}
+		tagStorage := &mockTagStorage{}
+		manager := NewProjectManager(currentStorage, logStorage, tagStorage)
+
+		err := manager.NewAt("ProjectA", "1", time.Now())
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !currentStorage.cleared {
+			t.Error("Clear() should have been called as rollback after Append failure")
+		}
+	})
+
+	t.Run("Write失敗時はAppendもClearも呼ばれない", func(t *testing.T) {
+		// manager.go:313-317: Write失敗は Append 到達前に return
+		currentStorage := &mockCurrentStorage{
+			writeError: errors.New("write failed"),
+		}
+		logStorage := &mockLogStorage{}
+		tagStorage := &mockTagStorage{}
+		manager := NewProjectManager(currentStorage, logStorage, tagStorage)
+
+		err := manager.NewAt("ProjectA", "1", time.Now())
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if len(logStorage.appendCalls) != 0 {
+			t.Errorf("Append should not be called when Write fails, got %d calls", len(logStorage.appendCalls))
+		}
+		if currentStorage.cleared {
+			t.Error("Clear() should not be called when Write fails")
+		}
+	})
+}
+
+// TestStopAt_StorageFailure は StopAt の Append 失敗時に Clear が呼ばれないことを固定する
+func TestStopAt_StorageFailure(t *testing.T) {
+	t.Run("Append失敗時はClearを呼ばずにエラーを返す", func(t *testing.T) {
+		// manager.go:383-386: Append失敗は Clear の前に return
+		currentStorage := &mockCurrentStorage{
+			readResult: "ProjectA\t1",
+		}
+		logStorage := &mockLogStorage{
+			appendError: errors.New("disk full"),
+		}
+		tagStorage := &mockTagStorage{}
+		manager := NewProjectManager(currentStorage, logStorage, tagStorage)
+
+		err := manager.StopAt(time.Now())
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if currentStorage.cleared {
+			t.Error("Clear() should NOT be called when Append fails (log not written, so current stays)")
+		}
+	})
+}
+
+// TestSwitchAt_StorageFailure は SwitchAt 各ステージのエラー伝播を固定する
+func TestSwitchAt_StorageFailure(t *testing.T) {
+	t.Run("旧プロジェクトのstop Append失敗 → エラーを返す", func(t *testing.T) {
+		currentStorage := &mockCurrentStorage{
+			readResult: "OldProject\t1",
+		}
+		logStorage := &mockLogStorage{
+			appendError: errors.New("disk full"),
+		}
+		tagStorage := &mockTagStorage{}
+		manager := NewProjectManager(currentStorage, logStorage, tagStorage)
+
+		err := manager.SwitchAt("NewProject", "2", time.Now())
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		// stop の1回のみ呼ばれていること（start には到達しない）
+		if len(logStorage.appendCalls) != 1 {
+			t.Fatalf("expected 1 append call (stop only), got %d", len(logStorage.appendCalls))
+		}
+		if logStorage.appendCalls[0].action != "stop" {
+			t.Errorf("first append should be stop, got %q", logStorage.appendCalls[0].action)
+		}
+	})
+
+	t.Run("新規プロジェクトのstart Append失敗 → エラーを返す", func(t *testing.T) {
+		// appendErrorAfter=1: stop (1回目) は成功、start (2回目) で失敗
+		currentStorage := &mockCurrentStorage{
+			readResult: "OldProject\t1",
+		}
+		logStorage := &mockLogStorage{
+			appendError:      errors.New("disk full"),
+			appendErrorAfter: 1,
+		}
+		tagStorage := &mockTagStorage{}
+		manager := NewProjectManager(currentStorage, logStorage, tagStorage)
+
+		err := manager.SwitchAt("NewProject", "2", time.Now())
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		// stop と start の2回呼ばれ、2回目でエラー
+		if len(logStorage.appendCalls) != 2 {
+			t.Fatalf("expected 2 append calls, got %d", len(logStorage.appendCalls))
+		}
+		if logStorage.appendCalls[0].action != "stop" {
+			t.Errorf("call[0] should be stop, got %q", logStorage.appendCalls[0].action)
+		}
+		if logStorage.appendCalls[1].action != "start" {
+			t.Errorf("call[1] should be start, got %q", logStorage.appendCalls[1].action)
+		}
+	})
+
+	t.Run("Write失敗 → エラーを返す（両Appendは成功済み）", func(t *testing.T) {
+		currentStorage := &mockCurrentStorage{
+			readResult: "OldProject\t1",
+			writeError: errors.New("write failed"),
+		}
+		logStorage := &mockLogStorage{}
+		tagStorage := &mockTagStorage{}
+		manager := NewProjectManager(currentStorage, logStorage, tagStorage)
+
+		err := manager.SwitchAt("NewProject", "2", time.Now())
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		// stop + start の2回Appendが成功していること
+		if len(logStorage.appendCalls) != 2 {
+			t.Fatalf("expected 2 append calls (stop+start), got %d", len(logStorage.appendCalls))
+		}
+		if logStorage.appendCalls[0].action != "stop" {
+			t.Errorf("call[0] should be stop, got %q", logStorage.appendCalls[0].action)
+		}
+		if logStorage.appendCalls[1].action != "start" {
+			t.Errorf("call[1] should be start, got %q", logStorage.appendCalls[1].action)
 		}
 	})
 }

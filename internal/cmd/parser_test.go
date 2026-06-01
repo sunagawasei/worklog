@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
@@ -248,6 +249,96 @@ func TestParseDateArg(t *testing.T) {
 			t.Error("parseDateArg(\"\") should return error, but got nil")
 		}
 	})
+}
+
+func TestFormatDateLabel(t *testing.T) {
+	// 相対日数をもとに lastActivity を作成するヘルパー
+	daysAgo := func(n int) time.Time {
+		d := time.Now().AddDate(0, 0, -n)
+		// 時刻は当日正午にして日付計算が安定するようにする
+		return time.Date(d.Year(), d.Month(), d.Day(), 12, 0, 0, 0, d.Location())
+	}
+
+	tests := []struct {
+		name  string
+		input time.Time
+		want  string
+		note  string
+	}{
+		{
+			name:  "0日前（今日） → [Today]",
+			input: daysAgo(0),
+			want:  "[Today]",
+		},
+		{
+			name:  "1日前（昨日） → [Yesterday]",
+			input: daysAgo(1),
+			want:  "[Yesterday]",
+		},
+		{
+			name:  "3日前 → [3 days ago]",
+			input: daysAgo(3),
+			want:  "[3 days ago]",
+		},
+		{
+			name:  "6日前（< 7） → [6 days ago]",
+			input: daysAgo(6),
+			want:  "[6 days ago]",
+		},
+		{
+			name:  "7日前（境界: ちょうど1週間） → [1 week ago]",
+			input: daysAgo(7),
+			want:  "[1 week ago]",
+		},
+		{
+			name:  "8日前（7日超・14日以内） → [1 week ago]",
+			input: daysAgo(8),
+			want:  "[1 week ago]",
+		},
+		{
+			name:  "13日前（7 / 7 = 1） → [1 week ago]",
+			input: daysAgo(13),
+			want:  "[1 week ago]",
+		},
+		{
+			name:  "14日前（14 / 7 = 2） → [2 weeks ago]",
+			input: daysAgo(14),
+			want:  "[2 weeks ago]",
+		},
+		{
+			name:  "15日前（>= 15） → 空文字列（ラベルなし）",
+			input: daysAgo(15),
+			want:  "",
+		},
+		{
+			name:  "30日前 → 空文字列（ラベルなし）",
+			input: daysAgo(30),
+			want:  "",
+		},
+		{
+			// NOTE: 未来日付（daysDiff < 0）に対する処理は未定義。
+			// daysDiff < 0 の場合、daysDiff < 7 が true となるため
+			// "[-N days ago]" のような文字列が返る（バグ疑い）。
+			// 修正候補: daysDiff < 0 の場合 "" を返すべきか要検討。
+			name:  "未来日付（1日後） → \"[-1 days ago]\"（現状挙動・バグ疑い）",
+			input: time.Now().AddDate(0, 0, 1),
+			want:  fmt.Sprintf("[%d days ago]", -1),
+			note:  "未来日付の扱いは未定義。daysDiff=-1 が daysDiff<7 の分岐に入るため、意図しない文字列が返る",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := formatDateLabel(tc.input)
+			if got != tc.want {
+				extra := ""
+				if tc.note != "" {
+					extra = " [NOTE: " + tc.note + "]"
+				}
+				t.Errorf("formatDateLabel() = %q, want %q%s", got, tc.want, extra)
+			}
+		})
+	}
 }
 
 func TestParseRelativeDate(t *testing.T) {
