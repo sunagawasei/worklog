@@ -6,7 +6,7 @@
 
 - **シンプルな操作** - 直感的なコマンドで作業時間を記録
 - **タグベース管理** - プロジェクトをタグで分類
-- **対話モード** - 引数なしで対話的に操作可能（promptui使用）
+- **対話モード** - 引数なしで対話的に操作可能（charmbracelet/huh 使用）
 - **時刻指定機能** - 任意の時刻で打刻可能（過去の記録も可能）
 - **時間集計** - 日次の作業時間を自動計算・時間範囲表示
 - **プロジェクト切り替え** - 複数プロジェクトをスムーズに切り替え
@@ -37,6 +37,7 @@ go build -o worklog .
 | `stop`     | プロジェクト停止                 | `worklog stop`             |
 | `list`     | 作業一覧（日付指定可能）         | `worklog list [-1d]`       |
 | `timeline` | タイムライン表示（日付指定可能） | `worklog timeline [-1d]`   |
+| `tag`      | タグ管理（一覧/追加/削除）       | `worklog tag list`         |
 | `help`     | ヘルプ表示                       | `worklog help`             |
 
 **タグID**: `tags.json`に定義された数値ID（1, 2, 3...）を使用します
@@ -88,7 +89,7 @@ worklog stop
 worklog status
 
 # 9:00-20:00のタイムラインで作業状況を可視化
-# プロジェクトごとに異なる記号（■, ▦, ▨）で表示
+# プロジェクトごとに異なる記号（■, ▦, ▨, ▥, ▧）で表示
 # idle時間は · で表示
 worklog timeline
 
@@ -96,30 +97,6 @@ worklog timeline
 worklog timeline -1d           # 昨日のタイムライン
 worklog timeline 2025-01-15    # 特定日のタイムライン
 worklog timeline 20250115      # 連続形式も対応
-```
-
-### 対話モードの例
-
-```bash
-$ worklog new
-
-Project name
-▸ バグ修正
-
-Select tag
-──────────────────────────────────────
-  ▸  1 - Backlog
-     2 - Development
-     3 - Meeting
-──────────────────────────────────────
-
-Start time (HH:MM or HHMM, empty for now)
-▸
-
-────────────────────────────────────────
-  バグ修正 started
-  10:00 • Backlog (1)
-────────────────────────────────────────
 ```
 
 ## データ管理
@@ -173,11 +150,13 @@ Start time (HH:MM or HHMM, empty for now)
 
 ```
 internal/
-├── storage/    # ファイル操作層（完了）
-├── project/    # ビジネスロジック層（完了）
-├── cmd/        # コマンド処理層（完了）
-└── ui/         # ユーザーインターフェース層（完了）
-    ├── display.go  # 表示レンダリング（ボックス描画、プログレスバー）
-    └── prompt.go   # 対話的UI（promptui統合）
+├── config/     # データ/タグファイルのパス解決（XDG準拠）
+├── domain/     # 共有型定義
+├── storage/    # ファイルI/O層
+├── project/    # ビジネスロジック層
+├── cmd/        # CLIコマンド層
+└── ui/         # 表示層
+    ├── display.go  # 共有定数・ユーティリティ（ボックス描画、プログレスバー）
+    └── prompt.go   # 対話的UI（charmbracelet/huh）
 ```
 
