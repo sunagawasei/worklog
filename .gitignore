@@ -1,4 +1,8 @@
-.claude
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/worklog-find/
+!.claude/skills/worklog-operation/
 .mcp.json
 .serena
 CLAUDE.md
