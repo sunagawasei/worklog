@@ -113,7 +113,7 @@ worklog --json <command>          # JSON/NDJSON 出力（自動的に --no-inter
 worklog --no-interactive <command> # 対話 UI を無効化（引数が不足するとエラー）
 ```
 
-グローバルフラグのパースは `cmd/options.go` の `ParseGlobalFlags(args)` が担う。結果は `ExecOptions{JSONMode, NoInteractive, Args}` に格納され、各コマンドに渡される。
+グローバルフラグのパースは `internal/cmd/options.go` の `ParseGlobalFlags(args)` が担う。結果は `ExecOptions{JSONMode, NoInteractive, Args}` に格納され、各コマンドに渡される。
 
 `--json` 時の出力形式（`json_output.go` に定義）:
 

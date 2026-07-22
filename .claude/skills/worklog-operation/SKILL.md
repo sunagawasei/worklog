@@ -14,6 +14,8 @@ worklog は作業時間を記録するCLIツールです。このスキルを使
 - **タグIDは数値**。`worklog tag list --json` で取得してから使用すること
 - **`tag delete` はインタラクティブ確認が必要**。`--no-interactive` では実行不可
 - **全ミューテーション操作は `worklog status --json` で事前確認**してから実行すること
+- **画像（スクリーンショット等）から読み取った時刻で `new` / `switch` / `stop`（`[HH:MM]` 引数）を実行する場合、実行前に必ず `AskUserQuestion` で読み取った開始/終了時刻をユーザーに確認すること**。時刻の読み取りミスによる事後訂正が実際に発生している
+- **ユーザーが対話モードで `worklog stop` / `new` / `switch` を実行し `could not open a new TTY` 等のTTYエラーで失敗した場合**、エージェントが代わりに `--json` を付けて同じ操作を実行する（`stop`は必要なら `[HH:MM]` 引数も添える）。TTYが存在しない環境（Claude Codeのbash実行環境等）ではhuhライブラリの対話プロンプトが開けないため
 
 ## グローバルフラグ
 
@@ -119,7 +121,7 @@ worklog switch --json <プロジェクト名> <タグID> [HH:MM]
 worklog stop --json [HH:MM]
 ```
 
-`--json` 時は `time.Now()` で即停止（TUIプロンプトなし）。
+`--json` 時はTUIプロンプトが出ない。`[HH:MM]` 引数を渡せばその時刻で停止し、省略時は `time.Now()`（実行時点の時刻）で即停止する。
 
 出力:
 ```json
@@ -232,3 +234,26 @@ worklog new --json "<project>" <last_tag_id>
 ```
 
 タグIDは `find-past-project.sh` の3カラム目。ユーザーが別タグを指定した場合はそちらを優先。タグ名を人間可読に表示するなら `worklog tag list --json` で引いておく。
+
+## 外部ソースからのプロジェクト開始
+
+GitHub issueやNotionページなど外部ソースを起点に新規プロジェクトを開始する場合、**URLスラッグをそのままプロジェクト名にしない**。URLスラッグは実際のタイトルと異なる（省略・表記揺れ等）ことがある。
+
+### 手順
+
+1. **実際のタイトルを取得**してから命名する
+   - GitHub issue: `gh issue view <番号> --repo <owner>/<repo> --json title,body,state`
+   - Notionページ: `mcp__plugin_Notion_notion__notion-fetch` でページを取得し `title` を確認（URLのIDだけでは不十分。ページ内のスラッグ表記はタイトルの正確な表現とは限らない）
+2. **命名形式とタグをユーザーに確認**してから `worklog new` を実行する
+   - GitHub issue起点の既定形式: `#<issue番号> <issueタイトル>`（例: `#159 stg移設手順書の作成`）
+   - 同一リポジトリのissueを続けて記録する場合、直前に使ったタグ・命名形式をデフォルト候補として提案してよい（ユーザーが明示的に別形式を指定したらそちらに従う）
+
+### 命名を誤って開始してしまった場合
+
+worklogにはプロジェクト名の変更コマンドが存在しない。時間が経過してから正しいタイトルが判明した場合は、ログファイルを直接リネームする：
+
+```sh
+mv "~/.local/state/worklog/YYYY/MM/DD/<誤った名前>.log" "~/.local/state/worklog/YYYY/MM/DD/<正しい名前>.log"
+```
+
+`current` ファイルは稼働中プロジェクトのみを指すため、対象日が稼働中でなければ修正不要。稼働中の場合は `current` ファイル内のプロジェクト名も同様に書き換える。
