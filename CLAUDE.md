@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 仕事のタスクとスケジュールの管理
+
+仕事の棚卸し、週間計画、予定を考慮した日程調整には [work-planning](.claude/skills/work-planning/SKILL.md) を使う。
+Codex には `.agents/skills` から同じ原本を共有する。
+勤務条件と参照先は `CLAUDE.local.md`、計画はリポジトリ直下の `work-planning/開始日_終了日/` に保存する(週は月曜〜日曜、日付は `YYYY-MM-DD`。いずれも Git 管理外)。
+worklog は作業実績の記録に使い、将来の予定やタスクの完了状態とは分けて扱う。
+週全体は週ディレクトリの `todo.md`、当日分はその下の `days/YYYY-MM-DD/todo.md` を見る。それぞれの詳細は同じ階層の `plan.md` に置き、計画や進捗の変更を対応するファイルに反映する。
+
 ## 開発コマンド
 
 ```bash
