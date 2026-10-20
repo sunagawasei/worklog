@@ -6,6 +6,9 @@
 !.claude/skills/work-planning/
 .mcp.json
 .serena
+.cursor/
+.envrc
+.playwright-mcp/
 CLAUDE.local.md
 /work-planning/
 
