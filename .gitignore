@@ -1,6 +1,7 @@
 .claude/*
 !.claude/skills/
 .claude/skills/*
+!.claude/skills/worklog/
 !.claude/skills/worklog-find/
 !.claude/skills/worklog-operation/
 !.claude/skills/work-planning/
@@ -15,7 +16,7 @@ CLAUDE.local.md
 # Project specific files
 tags.json
 data/
-worklog
+/worklog
 
 # System files
 .DS_Store
@@ -23,5 +24,5 @@ worklog
 # Coverage files
 *.out
 coverage.html
-worklog
+/worklog
 

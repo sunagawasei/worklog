@@ -5,6 +5,8 @@ description: 過去のworklogタスクをキーワードで検索し、必要に
 
 # worklog-find — 過去タスク検索・再開スキル
 
+worklogの検索と再開は、このworklogプロジェクトの管理元セッションだけで行う。他プロジェクトやhandoff先では操作せず、管理元へ依頼する。
+
 ## 使用方法
 
 ```
@@ -78,7 +80,7 @@ worklog tag list --json
 選択されたタスクのプロジェクト名とタグIDを使って開始する:
 
 ```bash
-worklog new "<プロジェクト名>" <タグID>
+worklog new --json "<プロジェクト名>" <タグID> <HH:MM>
 ```
 
 現在稼働中のタスクがある場合は `switch` と同じ動作（自動停止→開始）になるため、
