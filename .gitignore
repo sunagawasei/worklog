@@ -1,10 +1,7 @@
 .claude/*
 !.claude/skills/
 .claude/skills/*
-!.claude/skills/worklog/
-!.claude/skills/worklog-find/
-!.claude/skills/worklog-operation/
-!.claude/skills/work-planning/
+
 .mcp.json
 .serena
 .cursor/
